@@ -39,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { DialogTrigger } from '@radix-ui/react-dialog';
 
 // 상품 타입 정의
 interface Product {
@@ -623,7 +624,7 @@ const MarketPage = () => {
             <DialogHeader>
               <DialogTitle>{selectedProduct.title}</DialogTitle>
               <DialogDescription>
-                {selectedProduct.timestamp.toLocaleDateString()} 등록
+                {selectedProduct.timestamp} 등록
               </DialogDescription>
             </DialogHeader>
             
@@ -696,7 +697,7 @@ const MarketPage = () => {
                   <Separator className="my-3" />
                   
                   <div className="text-2xl font-bold text-coffee-dark">
-                    {selectedProduct.price === 'free' ? '무료나눔' : `${selectedProduct.price.toLocaleString()}원`}
+                    {selectedProduct.price === 'free' ? '무료나눔' : `${selectedProduct.price}원`}
                   </div>
                 </div>
                 
@@ -771,7 +772,7 @@ const MarketPage = () => {
               <div>
                 <h4 className="font-medium text-sm">{selectedProduct?.title}</h4>
                 <p className="text-sm font-bold text-coffee-dark">
-                  {selectedProduct?.price === 'free' ? '무료나눔' : `${(selectedProduct?.price as number).toLocaleString()}원`}
+                  {selectedProduct?.price === 'free' ? '무료나눔' : `${(selectedProduct?.price as number)}원`}
                 </p>
               </div>
             </div>
