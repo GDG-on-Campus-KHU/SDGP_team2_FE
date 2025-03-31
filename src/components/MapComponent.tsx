@@ -389,21 +389,6 @@ const MapComponent = () => {
           </div>
         )}
       </div>
-      
-      {/* 검색바 */}
-      <form onSubmit={handleSearch} className="search-bar">
-        <Search className="w-5 h-5 text-coffee mx-3" />
-        <Input
-          type="text"
-          placeholder="지역명 또는 키워드로 검색"
-          className="flex-1 border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <Button type="submit" variant="ghost" className="px-3 text-coffee hover:text-coffee-dark hover:bg-coffee-cream/20">
-          검색
-        </Button>
-      </form>
     </div>
   );
 };
