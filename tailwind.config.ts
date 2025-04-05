@@ -19,6 +19,11 @@ export default {
 			}
 		},
 		extend: {
+			
+			fontFamily: {
+				sans: ['Pretendard', 'sans-serif'],
+			},
+			  
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
