@@ -275,9 +275,7 @@ const CafeSettingsPage = () => {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="pickup">방문 수거 (사용자가 직접 방문)</SelectItem>
-                            <SelectItem value="delivery">배송 (카페에서 발송)</SelectItem>
-                            <SelectItem value="both">모두 가능</SelectItem>
+                            <SelectItem value="pickup" defaultChecked>방문 수거 (사용자가 직접 방문)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription>
