@@ -231,53 +231,6 @@ const CafeBeansPage = () => {
                   />
                 </div>
               </div>
-              
-              {/* 이미지 업로드 영역 */}
-              <div className="space-y-4">
-                <FormLabel>원두 이미지</FormLabel>
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg h-48 bg-gray-50 relative overflow-hidden">
-                    {imagePreview ? (
-                      <>
-                        <img 
-                          src={imagePreview} 
-                          alt="원두 미리보기" 
-                          className="h-full w-full object-cover"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => setImagePreview(null)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center text-gray-500">
-                        <ImagePlus className="h-10 w-10 mb-2" />
-                        <p className="text-sm">이미지를 업로드하세요</p>
-                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP (최대 5MB)</p>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      onChange={handleImageUpload}
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col justify-center">
-                    <FormDescription>
-                      원두 이미지는 선택사항입니다. 이미지가 없어도 등록이 가능합니다.
-                      등록된 원두 이미지는 사용자가 수거 신청 시 원두의 특성을 파악하는데 도움이 됩니다.
-                    </FormDescription>
-                  </div>
-                </div>
-              </div>
-              
               <Button type="submit" className="bg-coffee hover:bg-coffee-dark w-full">
                 원두 등록하기
               </Button>
