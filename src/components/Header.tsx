@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Logo from '@/assets/logo.png';
 
 const Header = () => {
   const { isAuthenticated, user, logout, userType } = useAuth();
@@ -22,11 +23,10 @@ const Header = () => {
     <header className="bg-white shadow-sm h-16 sticky top-0 z-20">
       <div className="container mx-auto h-full flex items-center justify-between px-4">
         <Link to="/" className="flex items-center space-x-2">
-          <div className="flex items-center bg-coffee-cream rounded-full p-1.5">
-            <Coffee className="h-7 w-7 text-coffee" />
-            <Leaf className="h-5 w-5 text-eco absolute ml-3 mt-3" />
+          <div className="flex items-center bg-coffee-cream rounded-full p-1.0">
+            <img src={Logo} width={36} height={36} />
           </div>
-          <span className="text-xl font-bold text-coffee-dark">커피 그라운드</span>
+          <span className="text-xl font-bold text-coffee-dark">에코빈</span>
         </Link>
         
         <div className="flex items-center space-x-3">
