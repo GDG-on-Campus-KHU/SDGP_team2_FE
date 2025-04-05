@@ -49,13 +49,6 @@ const CafeDashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-3xl font-bold text-coffee-dark">카페 대시보드</h2>
-        <Button 
-          onClick={() => navigate('/cafe/settings')}
-          variant="outline" 
-          className="border-coffee text-coffee hover:bg-coffee-cream/50"
-        >
-          카페 정보 수정
-        </Button>
       </div>
       
       {/* 요약 카드 영역 */}
@@ -207,32 +200,7 @@ const CafeDashboard = () => {
           )}
         </CardContent>
       </Card>
-      
-      {/* 빠른 액션 버튼들 */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Button 
-          onClick={() => navigate('/cafe/beans')}
-          className="bg-coffee hover:bg-coffee-dark py-6"
-        >
-          <Coffee className="mr-2 h-5 w-5" />
-          원두 등록하기
-        </Button>
-        <Button 
-          onClick={() => navigate('/cafe/grounds')}
-          className="bg-eco hover:bg-eco-dark py-6"
-        >
-          <Package className="mr-2 h-5 w-5" />
-          찌꺼기 등록하기
-        </Button>
-        <Button 
-          onClick={() => navigate('/cafe/requests')}
-          variant="outline" 
-          className="border-coffee text-coffee hover:bg-coffee-cream/50 py-6"
-        >
-          <Users className="mr-2 h-5 w-5" />
-          수거 요청 관리
-        </Button>
-      </div>
+    
     </div>
   );
 };
