@@ -15,7 +15,6 @@ import CafeRequestsPage from "./pages/cafe/CafeRequestsPage";
 import CafeSettingsPage from "./pages/cafe/CafeSettingsPage";
 import UserMyPage from "./pages/user/UserMyPage";
 import AISolutionsPage from "./pages/AISolutionsPage";
-import EcoReportPage from "./pages/EcoReportPage";
 import MarketPage from "./pages/MarketPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
@@ -67,7 +66,6 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
       <Route path="/ai-solutions" element={<AISolutionsPage />} />
-      <Route path="/eco-report" element={<EcoReportPage />} />
       <Route path="/market" element={<MarketPage />} />
       
       {/* 404 페이지 */}

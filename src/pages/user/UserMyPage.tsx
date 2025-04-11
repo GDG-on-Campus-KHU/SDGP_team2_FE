@@ -193,13 +193,6 @@ const UserMyPage = () => {
             <h1 className="text-3xl font-bold text-coffee-dark">마이페이지</h1>
             <p className="text-muted-foreground">나의 수거 내역 및 환경 기여도를 확인해보세요.</p>
           </div>
-          <Button 
-            className="bg-coffee hover:bg-coffee-dark"
-            onClick={() => navigate('/eco-report')}
-          >
-            <BarChart3 className="mr-2 h-5 w-5" />
-            환경 리포트 보기
-          </Button>
         </div>
         
         {/* 사용자 대시보드 요약 */}
