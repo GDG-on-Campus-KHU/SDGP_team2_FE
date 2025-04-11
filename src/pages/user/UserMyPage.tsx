@@ -27,8 +27,6 @@ import {
   BarChart3,
   CheckCircle2,
   Clock,
-  Coffee,
-  Leaf,
   Trash2,
   XCircle,
 } from 'lucide-react';
@@ -128,11 +126,6 @@ const ecoReport = {
   levelProgress: 65,
   monthlyContribution: 3.2,
   lastMonth: 2.5,
-  badges: [
-    { name: '첫 수거 완료', icon: <Coffee className="h-5 w-5" />, earned: true },
-    { name: '5L 달성', icon: <Leaf className="h-5 w-5" />, earned: true },
-    { name: '10L 달성', icon: <Leaf className="h-5 w-5" />, earned: false },
-  ]
 };
 
 const UserMyPage = () => {
@@ -529,37 +522,6 @@ const UserMyPage = () => {
             </Card>
           </TabsContent>
         </Tabs>
-        
-        {/* 환경 배지 섹션 */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>획득한 환경 배지</CardTitle>
-            <CardDescription>
-              찌꺼기 수거 활동을 통해 획득한 환경 기여 배지입니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            {ecoReport.badges.map((badge, index) => (
-              <div 
-                key={index}
-                className={`flex flex-col items-center justify-center w-24 h-24 rounded-lg p-3 ${
-                  badge.earned 
-                    ? 'bg-eco-light border-2 border-eco' 
-                    : 'bg-gray-100 border-2 border-gray-200 opacity-50'
-                }`}
-              >
-                <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-2 ${
-                  badge.earned ? 'bg-eco text-white' : 'bg-gray-200 text-gray-400'
-                }`}>
-                  {badge.icon}
-                </div>
-                <span className="text-xs text-center font-medium">
-                  {badge.name}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
       </main>
       
       {/* 요청 상세 정보 대화상자 */}
