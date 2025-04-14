@@ -1,8 +1,8 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Coffee, Building2, Filter, Search, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {APIProvider, Map} from '@vis.gl/react-google-maps';
 import { 
   DropdownMenu, 
@@ -14,6 +14,14 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Location {
   id: number;
@@ -105,7 +113,6 @@ const MOCK_LOCATIONS: Location[] = [
     lng: 126.981,
     description: '특수 로스팅 원두 찌꺼기 제공'
   },
-
 ];
 
 const MapComponent = () => {
@@ -118,6 +125,12 @@ const MapComponent = () => {
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  
+  // 픽업 시간 관련 상태 추가
+  const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // 오늘 날짜로 초기화
+  const [selectedTime, setSelectedTime] = useState(''); // 빈 문자열로 초기화
+  const [selectedLocationForPickup, setSelectedLocationForPickup] = useState<Location | null>(null);
 
   // 사용자 위치 가져오기
   useEffect(() => {
@@ -194,7 +207,6 @@ const MapComponent = () => {
       markerRef.current = userMarker;
     };
     
-
     initMap();
   }, [userLocation]);
 
@@ -229,7 +241,12 @@ const MapComponent = () => {
   const handleMarkerClick = (location: Location) => setSelectedLocation(location);
   const closePopup = () => setSelectedLocation(null);
 
-  const handleApplyForCollection = (id: number) => {
+  const handleOpenPickupModal = (location: Location) => {
+    setSelectedLocationForPickup(location);
+    setIsPickupModalOpen(true);
+  };
+
+  const handleApplyForCollection = () => {
     if (!isAuthenticated) {
       toast({
         variant: 'destructive',
@@ -238,7 +255,24 @@ const MapComponent = () => {
       });
       return;
     }
-    toast({ title: '신청 완료', description: '수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.' });
+    
+    // 날짜 포맷팅
+    const dateObj = new Date(selectedDate);
+    const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+    
+    // 시간 포맷팅
+    const [hours, minutes] = selectedTime.split(':');
+    const hour = parseInt(hours);
+    const amPm = hour >= 12 ? '오후' : '오전';
+    const formattedHour = hour > 12 ? hour - 12 : hour;
+    const formattedTime = `${amPm} ${formattedHour}시${minutes !== '00' ? ` ${minutes}분` : ''}`;
+    
+    toast({ 
+      title: "신청 완료", 
+      description: `${formattedDate} ${formattedTime}에 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
+    });
+    
+    setIsPickupModalOpen(false);
     setSelectedLocation(null);
   };
 
@@ -256,60 +290,120 @@ const MapComponent = () => {
       <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} />
       <div ref={mapDivRef} className="map-container bg-gray-100 relative overflow-hidden rounded-xl shadow-inner">
       {selectedLocation && (
-  <div 
-    className="marker-popup absolute z-20 animate-fade-in"
-    style={{ 
-      top: '50%', 
-      left: '50%', 
-      transform: 'translate(-50%, -130%)' 
-    }}
-  >
-    <button 
-      className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-      onClick={closePopup}
-      aria-label="닫기"
-    >
-      ✕
-    </button>
-    <h3 className="font-bold text-lg mb-1 text-coffee-dark">{selectedLocation.name}</h3>
-    <div className="inline-flex items-center mb-2">
-      <span className={`badge ${
-        selectedLocation.type === 'cafe' ? 'bg-coffee text-white' : 
-        selectedLocation.type === 'business' ? 'bg-eco-dark text-white' : 
-        'bg-eco text-white'
-      } px-2 py-1 rounded-full text-xs`}>
-        {selectedLocation.type === 'cafe' ? '카페' : 
-         selectedLocation.type === 'business' ? '기업' : '수거소'}
-      </span>
-    </div>
-    <p className="text-sm text-gray-600 mb-2">{selectedLocation.address}</p>
-    <p className="text-sm mb-2">
-      <span className="font-medium">운영시간:</span> {selectedLocation.hours}
-    </p>
-    <p className="text-sm mb-3">
-      <span className="font-medium">찌꺼기 수거:</span> 
-      {selectedLocation.available ? (
-        <span className="text-eco-dark ml-1">가능</span>
-      ) : (
-        <span className="text-red-500 ml-1">불가능</span>
+        <div 
+          className="marker-popup absolute z-20 animate-fade-in"
+          style={{ 
+            top: '50%', 
+            left: '50%', 
+            transform: 'translate(-50%, -130%)' 
+          }}
+        >
+          <button 
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+            onClick={closePopup}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
+          <h3 className="font-bold text-lg mb-1 text-coffee-dark">{selectedLocation.name}</h3>
+          <div className="inline-flex items-center mb-2">
+            <span className={`badge ${
+              selectedLocation.type === 'cafe' ? 'bg-coffee text-white' : 
+              selectedLocation.type === 'business' ? 'bg-eco-dark text-white' : 
+              'bg-eco text-white'
+            } px-2 py-1 rounded-full text-xs`}>
+              {selectedLocation.type === 'cafe' ? '카페' : 
+              selectedLocation.type === 'business' ? '기업' : '수거소'}
+            </span>
+          </div>
+          <p className="text-sm text-gray-600 mb-2">{selectedLocation.address}</p>
+          <p className="text-sm mb-2">
+            <span className="font-medium">운영시간:</span> {selectedLocation.hours}
+          </p>
+          <p className="text-sm mb-3">
+            <span className="font-medium">찌꺼기 수거:</span> 
+            {selectedLocation.available ? (
+              <span className="text-eco-dark ml-1">가능</span>
+            ) : (
+              <span className="text-red-500 ml-1">불가능</span>
+            )}
+          </p>
+          {selectedLocation.description && (
+            <p className="text-sm mb-3 text-gray-600 italic bg-coffee-cream/20 p-2 rounded">
+              "{selectedLocation.description}"
+            </p>
+          )}
+          {selectedLocation.available && (
+            <Button 
+              className="w-full bg-coffee hover:bg-coffee-dark transition-colors"
+              onClick={() => handleOpenPickupModal(selectedLocation)}
+            >
+              픽업 시간 설정하기
+            </Button>
+          )}
+        </div>
       )}
-    </p>
-    {selectedLocation.description && (
-      <p className="text-sm mb-3 text-gray-600 italic bg-coffee-cream/20 p-2 rounded">
-        "{selectedLocation.description}"
-      </p>
-    )}
-    {selectedLocation.available && (
-      <Button 
-        className="w-full bg-coffee hover:bg-coffee-dark transition-colors"
-        onClick={() => handleApplyForCollection(selectedLocation.id)}
-      >
-        바로 신청하기
-      </Button>
-    )}
-  </div>
-)}
       </div>
+
+      <Dialog open={isPickupModalOpen} onOpenChange={setIsPickupModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>픽업 시간 설정</DialogTitle>
+            <DialogDescription>
+              {selectedLocationForPickup?.name}에서 커피 찌꺼기를 수거할 시간을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="pickup-date">픽업 날짜</Label>
+                <Input
+                  id="pickup-date"
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pickup-time">픽업 시간</Label>
+                <Input
+                  id="pickup-time"
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="w-full"
+                  step="3600"
+                />
+              </div>
+              
+              <div className="text-sm text-muted-foreground mt-2">
+                <p>* 카페 운영 시간: {selectedLocationForPickup?.hours}</p>
+                <p>* 픽업 가능 시간대 내에서 선택해주세요.</p>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPickupModalOpen(false)}
+            >
+              취소
+            </Button>
+            <Button 
+              className="bg-coffee hover:bg-coffee-dark"
+              onClick={handleApplyForCollection}
+              disabled={!selectedDate || !selectedTime}
+            >
+              신청하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
