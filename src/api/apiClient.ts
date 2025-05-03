@@ -1,7 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-// 기본 URL 설정
-const API_BASE_URL = process.env.REACT_APP_API_URL || ' 35.216.4.12:8080'; // 백엔드 서버 주소
+const API_BASE_URL = 'http://35.216.4.12:8080'; 
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -11,30 +10,25 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 10000,
 });
 
-// 액세스 토큰 취득
 const getAccessToken = (): string | null => {
   return localStorage.getItem('accessToken');
 };
 
-// 리프레시 토큰 취득
 const getRefreshToken = (): string | null => {
   return localStorage.getItem('refreshToken');
 };
 
-// 토큰 저장
 const saveTokens = (accessToken: string, refreshToken: string): void => {
   localStorage.setItem('accessToken', accessToken);
   localStorage.setItem('refreshToken', refreshToken);
 };
 
-// 토큰 제거
 const removeTokens = (): void => {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
 };
 
-// 토큰 갱신
 const refreshAccessToken = async (): Promise<string> => {
   const refreshToken = getRefreshToken();
   
@@ -85,13 +79,11 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
+        const newAccessToken = await refreshAccessToken();        
 
-        const newAccessToken = await refreshAccessToken();
-        
         originalRequest.headers.set('Authorization', `Bearer ${newAccessToken}`);
         return apiClient(originalRequest);
       } catch (refreshError) {
-
         removeTokens();
         window.location.href = '/login';
         return Promise.reject(refreshError);
@@ -102,9 +94,6 @@ apiClient.interceptors.response.use(
   }
 );
 
-// API 함수들
-
-// 회원가입 API
 export const register = async (userData: {
   username: string;
   password: string;
@@ -115,7 +104,6 @@ export const register = async (userData: {
   return apiClient.post('/api/auth/register', userData);
 };
 
-// 로그인 API
 export const login = async (loginData: {
   username: string;
   password: string;
@@ -123,16 +111,15 @@ export const login = async (loginData: {
   return apiClient.post('/api/auth/login', loginData);
 };
 
-// 구글 로그인 API
 export const googleLogin = async (authCode: string) => {
   return apiClient.post('/api/auth/login/google', {
     authorizationCode: authCode
   });
 };
 
-// 로그아웃 API 
 export const logout = async () => {
-
   removeTokens();
   return { success: true };
 };
+
+export default apiClient;

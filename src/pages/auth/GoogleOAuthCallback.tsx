@@ -5,6 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
 import { Loader } from 'lucide-react';
 
+const API_BASE_URL = 'http://35.216.4.12:8080';
+
 const GoogleOAuthCallback = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -14,7 +16,6 @@ const GoogleOAuthCallback = () => {
 
   useEffect(() => {
     const processOAuthCode = async () => {
-      // URL에서 인증 코드 추출
       const urlParams = new URLSearchParams(location.search);
       const code = urlParams.get('code');
       
@@ -24,25 +25,22 @@ const GoogleOAuthCallback = () => {
       }
       
       try {
-        // 백엔드에 인증 코드 전송
-        const response = await axios.post('/api/auth/login/google', {
+        const response = await axios.post(`${API_BASE_URL}/api/auth/login/google`, {
           authorizationCode: code
         });
         
         if (response.data && response.data.data) {
           const userData = response.data.data;
           
-          // JWT 토큰 저장
           localStorage.setItem('accessToken', userData.accessToken);
           localStorage.setItem('refreshToken', userData.refreshToken);
           
-          // AuthContext에 사용자 정보 설정
           login({
             id: userData.userId.toString(),
             name: userData.username,
             email: '', 
             userType: userData.role === 'USER' ? 'user' : 'cafe',
-            avatar: userData.profileImage
+            avatar: userData.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
           });
           
           toast({
@@ -51,7 +49,7 @@ const GoogleOAuthCallback = () => {
             duration: 3000,
           });
           
-          // 사용자 유형에 따라 리다이렉트
+
           if (userData.role === 'USER') {
             navigate('/');
           } else {
@@ -61,15 +59,16 @@ const GoogleOAuthCallback = () => {
       } catch (err: any) {
         console.error('구글 로그인 오류:', err);
         
-        if (err.response && err.response.data && err.response.data.message) {
-          setError(err.response.data.message);
-        } else {
-          setError('구글 로그인 처리 중 오류가 발생했습니다.');
+        let errorMessage = '구글 로그인 처리 중 오류가 발생했습니다.';
+        if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
         }
+        
+        setError(errorMessage);
         
         toast({
           title: "로그인 실패",
-          description: "구글 로그인 처리 중 오류가 발생했습니다.",
+          description: errorMessage,
           variant: "destructive",
           duration: 3000,
         });
@@ -96,7 +95,7 @@ const GoogleOAuthCallback = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <Loader className="w-10 h-10 text-coffee animate-spin mb-4" /> {/* Spinner → Loader 변경 */}
+      <Loader className="w-10 h-10 text-coffee animate-spin mb-4" />
       <p className="text-gray-600">구글 로그인 처리 중입니다. 잠시만 기다려주세요...</p>
     </div>
   );
