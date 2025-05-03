@@ -1,4 +1,3 @@
-
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -6,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage"; // 새 회원가입 페이지 추가
 import NotFound from "./pages/NotFound";
 import CafeManagementPage from "./pages/CafeManagementPage";
 import CafeDashboard from "./pages/cafe/CafeDashboard";
@@ -16,6 +16,7 @@ import CafeSettingsPage from "./pages/cafe/CafeSettingsPage";
 import UserMyPage from "./pages/user/UserMyPage";
 import AISolutionsPage from "./pages/AISolutionsPage";
 import MarketPage from "./pages/MarketPage";
+import GoogleOAuthCallback from "./pages/auth/GoogleOAuthCallback"; // 구글 OAuth 콜백 추가
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
@@ -44,7 +45,8 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} /> {/* 새 회원가입 페이지로 변경 */}
+      <Route path="/oauth/google/callback" element={<GoogleOAuthCallback />} /> {/* 구글 OAuth 콜백 추가 */}
       
       {/* 카페 관리자 라우트 */}
       <Route path="/cafe" element={
