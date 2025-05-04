@@ -109,13 +109,29 @@ const CafeBeansPage = () => {
   };
 
   // 원두 삭제 처리
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     //setBeans(beans.filter((bean) => bean.beanId !== id));
-    toast({
-      title: "원두 삭제 완료",
-      description: "선택한 원두가 삭제되었습니다.",
-      duration: 3000,
-    });
+
+    try {
+      const response = await apiClient.delete(`/api/beans/${id}`);
+
+      console.log("[디버깅] 원두 삭제 성공 :", response.data);
+      if (response.status == 200) {
+        toast({
+          title: "원두 삭제 완료",
+          description: "선택한 원두가 삭제되었습니다.",
+          duration: 3000,
+        });
+      }
+    } catch (error: any) {
+      console.log("[디버깅] 원두 삭제 오류 :", error);
+
+      toast({
+        title: "원두 삭제 실패",
+        description: "선택한 원두 삭제에 실패하였습니다.",
+        duration: 3000,
+      });
+    }
   };
 
   // 원두 조회
