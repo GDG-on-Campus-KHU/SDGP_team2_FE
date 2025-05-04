@@ -26,19 +26,12 @@ const LoginPage = () => {
   const handleGoogleLogin = async () => {
     try {
       console.log('[디버깅] Google 로그인 시도 시작');
-      // 상대 경로 사용 (프록시 적용)
-      const response = await axios.get('/api/auth/google/callback');
       
-      // 백엔드가 리디렉션 URL을 반환하는 경우
-      if (response.data) {
-        console.log('[디버깅] Google 로그인 URL 획득 성공:', response.data);
-        window.location.href = response.data;
-      }
+      window.location.href = '/api/auth/google/login';
+
     } catch (error: any) {
       console.error('[디버깅] Google 로그인 초기화 오류:', error);
       
-      // 백엔드 엔드포인트가 존재하지 않는 경우 대체 방법
-      // 실제 프로덕션에서는 이 방법은 피해야 합니다 (클라이언트 ID 노출 위험)
       toast({
         title: "Google 로그인 오류",
         description: "Google 로그인을 시작하는 중 오류가 발생했습니다. 일반 로그인을 시도해주세요.",
