@@ -191,7 +191,7 @@ const CafeDashboard = () => {
 
     fetchCafeInfo();
     fetchCafePickupList();
-  }, [toast]);
+  }, []);
 
   // 로딩 중 표시
   if (loading) {

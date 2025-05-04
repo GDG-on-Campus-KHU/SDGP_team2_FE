@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Building2, ImagePlus, UploadCloud } from "lucide-react";
+import { Building2, Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -46,8 +46,6 @@ const cafeFormSchema = z.object({
   phone: z.string().min(10, {
     message: "연락처는 최소 10자 이상이어야 합니다.",
   }),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
   openHours: z.string().min(2, {
     message: "운영 시간을 입력해주세요.",
   }),
@@ -65,36 +63,89 @@ const cafeFormSchema = z.object({
 const CafeSettingsPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [cafeId, setCafeId] = useState(2); // Default value, could be set based on user or context
 
   // 폼 초기화
   const form = useForm<z.infer<typeof cafeFormSchema>>({
     resolver: zodResolver(cafeFormSchema),
     defaultValues: {
-      name: user?.name || "",
-      address: "서울시 강남구 테헤란로 101",
-      detailAddress: "2층",
-      phone: "02-1234-5678",
-      latitude: 37.5665, // You would need to get actual coordinates
-      longitude: 126.978, //
-      openHours: "매일 07:00 - 22:00",
-      description:
-        "친환경 컨셉의 카페입니다. 에티오피아, 콜롬비아 원두를 주로 사용하며 지속 가능한 커피 문화를 만들어갑니다.",
-      collectSchedule: "매일 오전 10시 ~ 12시, 오후 3시 ~ 5시",
+      name: "",
+      address: "",
+      detailAddress: "",
+      phone: "",
+      openHours: "",
+      description: "",
+      collectSchedule: "",
     },
   });
 
+  // Fetch cafe data when component mounts
+  useEffect(() => {
+    const fetchCafeData = async () => {
+      setLoading(true);
+      try {
+        const response = await apiClient.get(`/api/cafes/${cafeId}`);
+        console.log("[디버깅] 카페 정보 조회 성공:", response.data);
+
+        if (response.data && response.data.data) {
+          const cafeData = response.data.data;
+
+          // Reset form with fetched data
+          form.reset({
+            name: cafeData.name || "",
+            address: cafeData.address || "",
+            detailAddress: cafeData.detailAddress || "",
+            phone: cafeData.phone || "",
+            openHours: cafeData.openHours || "",
+            description: cafeData.description || "",
+            collectSchedule: cafeData.collectSchedule || "",
+          });
+        }
+      } catch (error: any) {
+        console.error("[디버깅] 카페 정보 조회 오류:", error);
+
+        toast({
+          title: "카페 정보 로드 실패",
+          description: "카페 정보를 불러오는데 실패했습니다.",
+          variant: "destructive",
+          duration: 3000,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCafeData();
+  }, [cafeId, toast, form, user?.name]);
+
   // 폼 제출 처리
   const onSubmit = async (values: z.infer<typeof cafeFormSchema>) => {
-    console.log("Updated cafe information:", values);
+    try {
+      console.log("[디버깅] 카페 정보 업데이트 요청:", values);
 
-    await apiClient.put("/api/cafes", values);
+      const response = await apiClient.put(`/api/cafes/${cafeId}`, values);
+      console.log("[디버깅] 카페 정보 업데이트 성공:", response.data);
+    } catch (error: any) {
+      console.error("[디버깅] 카페 정보 업데이트 오류:", error);
 
-    toast({
-      title: "설정 저장 완료",
-      description: "카페 정보가 성공적으로 저장되었습니다.",
-      duration: 3000,
-    });
+      toast({
+        title: "설정 저장 실패",
+        description: "카페 정보 저장 중 오류가 발생했습니다.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader className="h-10 w-10 text-coffee animate-spin" />
+        <span className="ml-2">카페 정보를 불러오는 중입니다...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -230,35 +281,6 @@ const CafeSettingsPage = () => {
                 </h3>
 
                 <div className="grid gap-6 md:grid-cols-2">
-                  {/* <FormField
-                    control={form.control}
-                    name="collectMethod"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>선호하는 수거 방법</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="수거 방법 선택" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="pickup" defaultChecked>
-                              방문 수거 (사용자가 직접 방문)
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          사용자가 커피 찌꺼기를 수거하는 방법을 선택해주세요.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  /> */}
-
                   <FormField
                     control={form.control}
                     name="collectSchedule"

@@ -146,7 +146,7 @@ const CafeRequestsPage = () => {
         // 모든 요청을 병렬로 실행
         const requestPromises = statuses.map((status) =>
           apiClient
-            .get("/api/cafe/pickups", { params: { status } })
+            .get("/api/cafe/pickups")
             .then((response) => {
               console.log(`[디버깅] ${status} 요청 조회 성공:`, response.data);
               if (response.data && response.data.data) {
