@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {APIProvider, Map} from '@vis.gl/react-google-maps';
+import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import axios from 'axios';
 import {
   Dialog,
   DialogContent,
@@ -26,85 +27,34 @@ interface Location {
   description?: string;
 }
 
-const MOCK_LOCATIONS: Location[] = [
-  { 
-    id: 1, 
-    name: '스타벅스 강남점', 
-    type: 'cafe', 
-    address: '서울시 강남구 테헤란로 101', 
-    hours: '매일 07:00 - 22:00', 
-    available: true,
-    lat: 37.508, 
-    lng: 127.062,
-    description: '매일 오전 수거 가능, 약 5L의 찌꺼기 배출'
-  },
-  { 
-    id: 2, 
-    name: '커피빈 선릉점', 
-    type: 'cafe', 
-    address: '서울시 강남구 선릉로 423', 
-    hours: '매일 08:00 - 21:00', 
-    available: true,
-    lat: 37.504, 
-    lng: 127.049,
-    description: '에티오피아 예가체프 원두 사용'
-  },
-  { 
-    id: 3, 
-    name: '서울숲 수거소', 
-    type: 'collection', 
-    address: '서울시 성동구 서울숲2길 32-14', 
-    hours: '월-금 09:00 - 18:00', 
-    available: true,
-    lat: 37.547, 
-    lng: 127.039,
-    description: '지역 내 모든 종류의 커피 찌꺼기 수거'
-  },
-  { 
-    id: 4, 
-    name: '에코 솔루션즈', 
-    type: 'business', 
-    address: '서울시 마포구 월드컵북로 396', 
-    hours: '월-금 09:00 - 17:00', 
-    available: false,
-    lat: 37.582, 
-    lng: 126.908,
-    description: '대량 수거 전문 (최소 50L)'
-  },
-  { 
-    id: 5, 
-    name: '그린 카페', 
-    type: 'cafe', 
-    address: '서울시 서초구 서초대로 411', 
-    hours: '매일 08:30 - 20:00', 
-    available: true,
-    lat: 37.498, 
-    lng: 127.024,
-    description: '유기농 원두 전문점, 매주 목요일 대량 수거 가능'
-  },
-  { 
-    id: 6, 
-    name: '환경부 수거 센터', 
-    type: 'collection', 
-    address: '서울시 용산구 이촌로 74', 
-    hours: '월-금 09:00 - 18:00, 토 09:00 - 13:00', 
-    available: true,
-    lat: 37.532, 
-    lng: 126.977,
-    description: '정부 공식 재활용 센터'
-  },
-  { 
-    id: 7, 
-    name: '블루보틀 삼청점', 
-    type: 'cafe', 
-    address: '서울시 종로구 삼청로 109', 
-    hours: '매일 08:00 - 20:00', 
-    available: true,
-    lat: 37.582, 
-    lng: 126.981,
-    description: '특수 로스팅 원두 찌꺼기 제공'
-  },
-];
+// 백엔드 API 응답 타입 정의
+interface CafeResponse {
+  cafeId: number;
+  memberId: number;
+  name: string;
+  address: string;
+  detailAddress: string;
+  latitude: number;
+  longitude: number;
+  phone: string;
+  collectSchedule: string;
+  openHours: string;
+  description: string;
+}
+
+interface ApiResponseData {
+  content: CafeResponse[];
+  totalElements: number;
+  totalPages: number;
+}
+
+interface ApiResponse {
+  status: number;
+  code: string;
+  message: string;
+  data: ApiResponseData;
+  timestamp: string;
+}
 
 const MapComponent = () => {
   const [filterValue, setFilterValue] = useState('all');
@@ -112,6 +62,8 @@ const MapComponent = () => {
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
@@ -122,6 +74,42 @@ const MapComponent = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // 오늘 날짜로 초기화
   const [selectedTime, setSelectedTime] = useState(''); // 빈 문자열로 초기화
   const [selectedLocationForPickup, setSelectedLocationForPickup] = useState<Location | null>(null);
+
+  // 백엔드 API에서 카페 목록 가져오기
+  const fetchCafes = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.get<ApiResponse>('/api/cafes');
+      const cafes = response.data.data.content;
+      
+      // API 응답을 Location 인터페이스에 맞게 변환
+      const cafeLocations = cafes.map(cafe => ({
+        id: cafe.cafeId,
+        name: cafe.name,
+        type: 'cafe' as const,
+        address: `${cafe.address} ${cafe.detailAddress}`,
+        hours: cafe.openHours,
+        available: true,
+        lat: cafe.latitude,
+        lng: cafe.longitude,
+        description: cafe.description || `수거 일정: ${cafe.collectSchedule}`,
+      }));
+      
+      setLocations(cafeLocations);
+      toast({ title: '카페 정보 로드 완료', description: `${cafeLocations.length}개의 카페를 찾았습니다.` });
+    } catch (error) {
+      console.error('카페 정보 로딩 실패:', error);
+      toast({ 
+        variant: 'destructive', 
+        title: '데이터 로딩 실패', 
+        description: '카페 정보를 가져오는데 실패했습니다. 기본 데이터를 표시합니다.' 
+      });
+      // 오류 발생 시 기본 데이터 사용
+      setLocations(MOCK_LOCATIONS);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 사용자 위치 가져오기
   useEffect(() => {
@@ -139,6 +127,8 @@ const MapComponent = () => {
             title: '위치 오류',
             description: '위치 정보를 가져오는데 실패했습니다.',
           });
+          // 위치 정보를 가져올 수 없는 경우 기본 위치 설정 (서울)
+          setUserLocation({ lat: 37.5665, lng: 126.9780 });
         }
       );
     } else {
@@ -148,12 +138,17 @@ const MapComponent = () => {
         title: '위치 서비스 미지원',
         description: '이 브라우저는 위치 서비스를 지원하지 않습니다.',
       });
+      // 위치 서비스를 지원하지 않는 경우 기본 위치 설정 (서울)
+      setUserLocation({ lat: 37.5665, lng: 126.9780 });
     }
+    
+    // 카페 데이터 가져오기
+    fetchCafes();
   }, []);
 
   // 맵 초기화
   useEffect(() => {
-    if (!userLocation || mapRef.current || !mapDivRef.current) return;
+    if (!userLocation || mapRef.current || !mapDivRef.current || isLoading) return;
 
     const initMap = async () => {
       const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary;
@@ -172,8 +167,8 @@ const MapComponent = () => {
         position: userLocation!,
       });
     
-      // MOCK_LOCATIONS 마커 추가
-      MOCK_LOCATIONS.forEach((loc) => {
+      // 카페 위치 마커 추가
+      locations.forEach((loc) => {
         const marker = new AdvancedMarkerElement({
           map: mapInstance,
           title: loc.name,
@@ -199,7 +194,7 @@ const MapComponent = () => {
     };
     
     initMap();
-  }, [userLocation]);
+  }, [userLocation, locations, isLoading]);
 
   const handleFilterChange = (value: string) => {
     setFilterValue(value);
@@ -220,7 +215,7 @@ const MapComponent = () => {
   };
 
   const getFilteredLocations = () => {
-    let filtered = MOCK_LOCATIONS;
+    let filtered = locations;
     if (filterValue !== 'all') filtered = filtered.filter(loc => loc.type === filterValue);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -268,74 +263,108 @@ const MapComponent = () => {
   };
 
   const handleMyLocationClick = () => {
-    if (userLocation) {
+    if (userLocation && mapRef.current) {
+      mapRef.current.setCenter(userLocation);
       toast({ title: '현재 위치', description: '지도를 현재 위치로 이동합니다.' });
-      // mapRef.current?.setCenter(userLocation); // 실제 지도 이동 로직
     } else {
       toast({ variant: 'destructive', title: '위치 정보 없음', description: '위치 정보를 가져올 수 없습니다.' });
     }
   };
 
+  // 백업 모의 데이터 - API 연결 실패 시 사용
+  const MOCK_LOCATIONS: Location[] = [
+    { 
+      id: 1, 
+      name: '스타벅스 강남점', 
+      type: 'cafe', 
+      address: '서울시 강남구 테헤란로 101', 
+      hours: '매일 07:00 - 22:00', 
+      available: true,
+      lat: 37.508, 
+      lng: 127.062,
+      description: '매일 오전 수거 가능, 약 5L의 찌꺼기 배출'
+    },
+    { 
+      id: 2, 
+      name: '커피빈 선릉점', 
+      type: 'cafe', 
+      address: '서울시 강남구 선릉로 423', 
+      hours: '매일 08:00 - 21:00', 
+      available: true,
+      lat: 37.504, 
+      lng: 127.049,
+      description: '에티오피아 예가체프 원두 사용'
+    },
+    // 나머지 모의 데이터...
+  ];
+
   return (
     <div className="relative h-full">
       <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} />
       <div ref={mapDivRef} className="map-container bg-gray-100 relative overflow-hidden rounded-xl shadow-inner">
-      {selectedLocation && (
-        <div 
-          className="marker-popup absolute z-20 animate-fade-in"
-          style={{ 
-            top: '50%', 
-            left: '50%', 
-            transform: 'translate(-50%, -130%)' 
-          }}
-        >
-          <button 
-            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-            onClick={closePopup}
-            aria-label="닫기"
-          >
-            ✕
-          </button>
-          <h3 className="font-bold text-lg mb-1 text-coffee-dark">{selectedLocation.name}</h3>
-          <div className="inline-flex items-center mb-2">
-            <span className={`badge ${
-              selectedLocation.type === 'cafe' ? 'bg-coffee text-white' : 
-              selectedLocation.type === 'business' ? 'bg-eco-dark text-white' : 
-              'bg-eco text-white'
-            } px-2 py-1 rounded-full text-xs`}>
-              {selectedLocation.type === 'cafe' ? '카페' : 
-              selectedLocation.type === 'business' ? '기업' : '수거소'}
-            </span>
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10">
+            <div className="text-white">지도 로딩 중...</div>
           </div>
-          <p className="text-sm text-gray-600 mb-2">{selectedLocation.address}</p>
-          <p className="text-sm mb-2">
-            <span className="font-medium">운영시간:</span> {selectedLocation.hours}
-          </p>
-          <p className="text-sm mb-3">
-            <span className="font-medium">찌꺼기 수거:</span> 
-            {selectedLocation.available ? (
-              <span className="text-eco-dark ml-1">가능</span>
-            ) : (
-              <span className="text-red-500 ml-1">불가능</span>
-            )}
-          </p>
-          {selectedLocation.description && (
-            <p className="text-sm mb-3 text-gray-600 italic bg-coffee-cream/20 p-2 rounded">
-              "{selectedLocation.description}"
-            </p>
-          )}
-          {selectedLocation.available && (
-            <Button 
-              className="w-full bg-coffee hover:bg-coffee-dark transition-colors"
-              onClick={() => handleOpenPickupModal(selectedLocation)}
+        )}
+        
+        {selectedLocation && (
+          <div 
+            className="marker-popup absolute z-20 animate-fade-in"
+            style={{ 
+              top: '50%', 
+              left: '50%', 
+              transform: 'translate(-50%, -130%)' 
+            }}
+          >
+            <button 
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={closePopup}
+              aria-label="닫기"
             >
-              픽업 시간 설정하기
-            </Button>
-          )}
-        </div>
-      )}
+              ✕
+            </button>
+            <h3 className="font-bold text-lg mb-1 text-coffee-dark">{selectedLocation.name}</h3>
+            <div className="inline-flex items-center mb-2">
+              <span className={`badge ${
+                selectedLocation.type === 'cafe' ? 'bg-coffee text-white' : 
+                selectedLocation.type === 'business' ? 'bg-eco-dark text-white' : 
+                'bg-eco text-white'
+              } px-2 py-1 rounded-full text-xs`}>
+                {selectedLocation.type === 'cafe' ? '카페' : 
+                selectedLocation.type === 'business' ? '기업' : '수거소'}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">{selectedLocation.address}</p>
+            <p className="text-sm mb-2">
+              <span className="font-medium">운영시간:</span> {selectedLocation.hours}
+            </p>
+            <p className="text-sm mb-3">
+              <span className="font-medium">찌꺼기 수거:</span> 
+              {selectedLocation.available ? (
+                <span className="text-eco-dark ml-1">가능</span>
+              ) : (
+                <span className="text-red-500 ml-1">불가능</span>
+              )}
+            </p>
+            {selectedLocation.description && (
+              <p className="text-sm mb-3 text-gray-600 italic bg-coffee-cream/20 p-2 rounded">
+                "{selectedLocation.description}"
+              </p>
+            )}
+            {selectedLocation.available && (
+              <Button 
+                className="w-full bg-coffee hover:bg-coffee-dark transition-colors"
+                onClick={() => handleOpenPickupModal(selectedLocation)}
+              >
+                픽업 시간 설정하기
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* 나머지 코드는 그대로 유지 */}
       <Dialog open={isPickupModalOpen} onOpenChange={setIsPickupModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -395,6 +424,12 @@ const MapComponent = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      <div className="absolute bottom-4 right-4 z-10">
+        <Button onClick={handleMyLocationClick} className="bg-coffee hover:bg-coffee-dark shadow-lg">
+          내 위치로
+        </Button>
+      </div>
     </div>
   );
 };
