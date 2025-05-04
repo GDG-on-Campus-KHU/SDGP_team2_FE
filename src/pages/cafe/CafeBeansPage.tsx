@@ -1,12 +1,11 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -15,101 +14,93 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coffee, ImagePlus, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Coffee, ImagePlus, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import apiClient from "@/api/apiClient";
 
 // 원두 정보 검증 스키마
 const beanFormSchema = z.object({
   name: z.string().min(2, {
-    message: '원두 이름은 최소 2자 이상이어야 합니다.',
+    message: "원두 이름은 최소 2자 이상이어야 합니다.",
   }),
   origin: z.string().min(2, {
-    message: '원산지는 최소 2자 이상이어야 합니다.',
-  }),
-  roastLevel: z.string().min(1, {
-    message: '로스팅 레벨을 선택해주세요.',
+    message: "원산지는 최소 2자 이상이어야 합니다.",
   }),
   description: z.string().max(500, {
-    message: '설명은 최대 500자까지 입력 가능합니다.',
-  }),
-  characteristics: z.string().max(200, {
-    message: '특징은 최대 200자까지 입력 가능합니다.',
+    message: "설명은 최대 500자까지 입력 가능합니다.",
   }),
 });
 
 // 모의 기존 원두 데이터
 const mockBeans = [
   {
-    id: 1,
-    name: '에티오피아 예가체프',
-    origin: '에티오피아',
-    roastLevel: 'medium',
-    description: '꽃향기와 감귤류의 산미가 특징인 에티오피아 예가체프입니다. 밝은 산미와 달콤한 과일향이 조화롭게 어우러집니다.',
-    characteristics: '꽃향기, 감귤류 산미, 달콤한 애프터테이스트',
-    image: 'https://api.dicebear.com/7.x/shapes/svg?seed=bean1'
+    beanId: 1,
+    name: "에티오피아 예가체프",
+    origin: "에티오피아",
+    description:
+      "꽃향기와 감귤류의 산미가 특징인 에티오피아 예가체프입니다. 밝은 산미와 달콤한 과일향이 조화롭게 어우러집니다.",
   },
   {
-    id: 2,
-    name: '콜롬비아 수프리모',
-    origin: '콜롬비아',
-    roastLevel: 'medium-dark',
-    description: '견과류의 고소함과 초콜릿 풍미가 특징인 콜롬비아 수프리모입니다. 균형 잡힌 바디감과 부드러운 산미를 가집니다.',
-    characteristics: '견과류, 초콜릿, 캐러멜',
-    image: 'https://api.dicebear.com/7.x/shapes/svg?seed=bean2'
+    beanId: 2,
+    name: "콜롬비아 수프리모",
+    origin: "콜롬비아",
+    description:
+      "견과류의 고소함과 초콜릿 풍미가 특징인 콜롬비아 수프리모입니다. 균형 잡힌 바디감과 부드러운 산미를 가집니다.",
   },
 ];
 
 const CafeBeansPage = () => {
   const { toast } = useToast();
-  const [beans, setBeans] = useState(mockBeans);
+  const [beans, setBeans] = useState([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
+
   // 폼 초기화
   const form = useForm<z.infer<typeof beanFormSchema>>({
     resolver: zodResolver(beanFormSchema),
     defaultValues: {
-      name: '',
-      origin: '',
-      roastLevel: '',
-      description: '',
-      characteristics: '',
+      name: "",
+      origin: "",
+      description: "",
     },
   });
 
-  // 이미지 업로드 처리
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
   // 폼 제출 처리
-  const onSubmit = (values: z.infer<typeof beanFormSchema>) => {
-    const newBean = {
-      id: Date.now(),
-      ...values,
-      image: imagePreview || `https://api.dicebear.com/7.x/shapes/svg?seed=bean${Date.now()}`
-    };
-    
-    setBeans([...beans, newBean]);
-    
+  const onSubmit = async (values: z.infer<typeof beanFormSchema>) => {
+    try {
+      const response = await apiClient.post("/api/beans");
+
+      console.log("[디버깅] 원두 등록 성공 :", response.data);
+
+      if (response.data && response.data.data) {
+        setBeans([...beans, response.data.data]);
+      }
+    } catch (error: any) {
+      console.error("[디버깅] 픽업 리스트 조회 오류:", error);
+
+      toast({
+        title: "픽업 리스트 정보 로딩 실패",
+        description: "픽업 리스트 정보를 가져오지 못했습니다",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
     // 폼 초기화
     form.reset();
-    setImagePreview(null);
-    
+
     toast({
       title: "원두 등록 완료",
       description: `${values.name} 원두가 성공적으로 등록되었습니다.`,
@@ -119,7 +110,7 @@ const CafeBeansPage = () => {
 
   // 원두 삭제 처리
   const handleDelete = (id: number) => {
-    setBeans(beans.filter(bean => bean.id !== id));
+    //setBeans(beans.filter((bean) => bean.beanId !== id));
     toast({
       title: "원두 삭제 완료",
       description: "선택한 원두가 삭제되었습니다.",
@@ -127,16 +118,44 @@ const CafeBeansPage = () => {
     });
   };
 
+  // 원두 조회
+  useEffect(() => {
+    const fetchBeans = async () => {
+      try {
+        const response = await apiClient.get("/api/beans");
+
+        console.log("[디버깅] 원두 목록 조회 성공 :", response.data);
+
+        if (response.data && response.data.data) {
+          setBeans(response.data.data);
+        }
+      } catch (error: any) {
+        console.error("[디버깅] 원두 리스트 조회 오류:", error);
+
+        setBeans(mockBeans);
+
+        toast({
+          title: "원두 리스트 정보 로딩 실패",
+          description: "원두 리스트 정보를 가져오지 못했습니다",
+          variant: "destructive",
+          duration: 3000,
+        });
+      }
+    };
+
+    fetchBeans();
+  }, [beans]);
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-coffee-dark">원두 관리</h2>
-      
+
       {/* 원두 등록 폼 */}
       <Card>
         <CardHeader>
           <CardTitle>새 원두 등록</CardTitle>
           <CardDescription>
-            카페에서 사용하는 원두 정보를 등록해주세요. 등록된 원두 정보는 수거 신청 시 함께 제공됩니다.
+            카페에서 사용하는 원두 정보를 등록해주세요. 등록된 원두 정보는 수거
+            신청 시 함께 제공됩니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,13 +170,16 @@ const CafeBeansPage = () => {
                       <FormItem>
                         <FormLabel>원두 이름</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: 에티오피아 예가체프" {...field} />
+                          <Input
+                            placeholder="예: 에티오피아 예가체프"
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="origin"
@@ -171,47 +193,9 @@ const CafeBeansPage = () => {
                       </FormItem>
                     )}
                   />
-                  
-                  <FormField
-                    control={form.control}
-                    name="roastLevel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>로스팅 레벨</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="로스팅 레벨 선택" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="light">라이트 로스트</SelectItem>
-                            <SelectItem value="medium">미디엄 로스트</SelectItem>
-                            <SelectItem value="medium-dark">미디엄-다크 로스트</SelectItem>
-                            <SelectItem value="dark">다크 로스트</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
-                
+
                 <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="characteristics"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>특징 (간략히)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="예: 과일향, 초콜릿향, 견과류" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
                   <FormField
                     control={form.control}
                     name="description"
@@ -219,10 +203,10 @@ const CafeBeansPage = () => {
                       <FormItem>
                         <FormLabel>상세 설명</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="원두의 맛과 향, 특징 등을 자세히 설명해주세요." 
+                          <Textarea
+                            placeholder="원두의 맛과 향, 특징 등을 자세히 설명해주세요."
                             className="resize-none min-h-[120px]"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -231,30 +215,30 @@ const CafeBeansPage = () => {
                   />
                 </div>
               </div>
-              <Button type="submit" className="bg-coffee hover:bg-coffee-dark w-full">
+              <Button
+                type="submit"
+                className="bg-coffee hover:bg-coffee-dark w-full"
+              >
                 원두 등록하기
               </Button>
             </form>
           </Form>
         </CardContent>
       </Card>
-      
+
       {/* 등록된 원두 목록 */}
-      <h3 className="text-xl font-semibold text-coffee-dark mt-8">등록된 원두 목록</h3>
+      <h3 className="text-xl font-semibold text-coffee-dark mt-8">
+        등록된 원두 목록
+      </h3>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {beans.map((bean) => (
-          <Card key={bean.id} className="overflow-hidden">
+          <Card key={bean.beanId} className="overflow-hidden">
             <div className="h-40 bg-gray-100 relative">
-              <img 
-                src={bean.image} 
-                alt={bean.name} 
-                className="h-full w-full object-cover"
-              />
               <Button
                 variant="destructive"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={() => handleDelete(bean.id)}
+                onClick={() => handleDelete(bean.beanId)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -264,22 +248,12 @@ const CafeBeansPage = () => {
                 <Coffee className="h-5 w-5 text-coffee" />
                 <CardTitle className="text-lg">{bean.name}</CardTitle>
               </div>
-              <CardDescription>{bean.origin} | {bean.roastLevel === 'light' ? '라이트' : 
-                bean.roastLevel === 'medium' ? '미디엄' : 
-                bean.roastLevel === 'medium-dark' ? '미디엄-다크' : '다크'} 로스트</CardDescription>
+              <CardDescription>{bean.origin} | </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-3">{bean.description}</p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {bean.characteristics.split(',').map((characteristic, index) => (
-                  <span 
-                    key={index} 
-                    className="text-xs bg-coffee-cream text-coffee-dark px-2 py-1 rounded-full"
-                  >
-                    {characteristic.trim()}
-                  </span>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground line-clamp-3">
+                {bean.description}
+              </p>
             </CardContent>
           </Card>
         ))}

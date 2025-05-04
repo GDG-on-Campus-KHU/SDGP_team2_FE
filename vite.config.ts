@@ -8,18 +8,18 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
   server: {
-    port: 8080, 
+    port: 8080,
     proxy: {
-      '/api': {
-        target: 'http://35.216.4.12:8080',
+      "/api": {
+        target: "http://35.216.4.12:8080",
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path
-      }
-    }
-  }
+        rewrite: (path) => path,
+      },
+    },
+  },
 });
