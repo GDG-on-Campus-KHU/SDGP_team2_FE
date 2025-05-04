@@ -81,12 +81,13 @@ const CafeBeansPage = () => {
   // 폼 제출 처리
   const onSubmit = async (values: z.infer<typeof beanFormSchema>) => {
     try {
-      const response = await apiClient.post("/api/beans");
+      console.log(values);
+      const response = await apiClient.post("/api/beans", values);
 
       console.log("[디버깅] 원두 등록 성공 :", response.data);
 
       if (response.data && response.data.data) {
-        setBeans([...beans, response.data.data]);
+        setBeans((prevBeans) => [...prevBeans, response.data.data]);
       }
     } catch (error: any) {
       console.error("[디버깅] 픽업 리스트 조회 오류:", error);
@@ -117,6 +118,7 @@ const CafeBeansPage = () => {
 
       console.log("[디버깅] 원두 삭제 성공 :", response.data);
       if (response.status == 200) {
+        setBeans((prevBeans) => prevBeans.filter((bean) => bean.beanId !== id));
         toast({
           title: "원두 삭제 완료",
           description: "선택한 원두가 삭제되었습니다.",
@@ -160,7 +162,7 @@ const CafeBeansPage = () => {
     };
 
     fetchBeans();
-  }, [beans]);
+  }, []);
   return (
     <div className="space-y-6">
       <h2 className="text-3xl font-bold text-coffee-dark">원두 관리</h2>

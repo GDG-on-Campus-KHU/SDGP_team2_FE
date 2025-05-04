@@ -11,15 +11,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  server: {
-    port: 8080,
-    proxy: {
-      "/api": {
-        target: "http://35.216.4.12:8080",
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path,
-      },
-    },
-  },
+  // server: {
+  //   port: 8080,
+  //   proxy: {
+  //     "/api": {
+  //       target: "http://35.216.4.12:8080",
+  //       changeOrigin: true,
+  //       secure: false,
+  //       rewrite: (path) => path,
+  //     },
+  //   },
+  // },
 });
