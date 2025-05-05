@@ -1,3 +1,5 @@
+// apiClient.ts 수정본 - 프로필 이미지 업로드 지원 추가
+
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
 // 프록시 사용을 위해 기본 URL을 비워둡니다
@@ -5,6 +7,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 // 프로덕션 환경: 실제 API URL 사용 (배포 시 수정 필요)
 const API_BASE_URL = '';
 
+// API 클라이언트 설정
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -163,18 +166,36 @@ apiClient.interceptors.response.use(
 
 // API 함수들
 
-// 회원가입 API
-export const register = async (userData: {
+// 회원가입 API - 프로필 이미지 지원 추가
+export interface RegisterUserData {
   username: string;
   password: string;
   email: string;
   role: string;
-  profileImage?: string;
-}) => {
+  profileImage?: string; // 이제 Base64 인코딩된 이미지 또는 URL 문자열 가능
+}
+
+export const register = async (userData: RegisterUserData) => {
   console.log('[디버깅] 회원가입 요청:', {
     ...userData,
-    password: '********' 
+    password: '********', 
+    profileImage: userData.profileImage ? 
+      userData.profileImage.startsWith('data:image') ? 
+        '(Base64 인코딩된 사용자 이미지)' : 
+        userData.profileImage 
+      : '(프로필 이미지 없음)'
   });
+  
+  // Base64 이미지가 너무 크면 요청이 실패할 수 있으므로 검증
+  if (userData.profileImage && userData.profileImage.startsWith('data:image')) {
+    // Base64 문자열의 크기 (바이트) 계산
+    const base64Size = Math.ceil((userData.profileImage.length * 3) / 4);
+    // 2MB보다 크면 경고 로그
+    if (base64Size > 2 * 1024 * 1024) {
+      console.warn('[디버깅] 경고: 프로필 이미지 크기가 2MB를 초과합니다. API 요청이 실패할 수 있습니다.');
+    }
+  }
+  
   return apiClient.post('/api/auth/register', userData);
 };
 
@@ -211,6 +232,31 @@ export const logout = async () => {
   console.log('[디버깅] 로그아웃 처리');
   removeTokens();
   return { success: true };
+};
+
+// 프로필 이미지 업데이트 (새 기능)
+export const updateProfileImage = async (userId: string, imageData: string) => {
+  console.log('[디버깅] 프로필 이미지 업데이트 요청:', { 
+    userId, 
+    imageData: imageData.startsWith('data:image') ? '(Base64 인코딩된 이미지)' : imageData
+  });
+  
+  try {
+    // 이미지 크기 제한 확인 (2MB)
+    if (imageData.startsWith('data:image')) {
+      const base64Size = Math.ceil((imageData.length * 3) / 4);
+      if (base64Size > 2 * 1024 * 1024) {
+        throw new Error('이미지 크기는 2MB 이하여야 합니다.');
+      }
+    }
+    
+    // 실제 API가 준비되었을 때 사용할 코드
+    return await apiClient.put(`/api/users/${userId}/profile-image`, { profileImage: imageData });
+    
+  } catch (error) {
+    console.error('[디버깅] 프로필 이미지 업데이트 오류:', error);
+    throw error;
+  }
 };
 
 // 수거 요청 생성 API
@@ -362,6 +408,5 @@ export const updatePickupStatus = async (pickupId: number, status: string) => {
     throw error;
   }
 };
-
 
 export default apiClient;

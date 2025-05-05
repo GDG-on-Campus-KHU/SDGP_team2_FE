@@ -27,8 +27,9 @@ const LoginPage = () => {
     try {
       console.log('[디버깅] Google 로그인 시도 시작');
       
-      window.location.href = '/api/auth/google/login';
-
+      // 백엔드 엔드포인트와 일치하도록 수정
+      window.location.href = '/api/auth/login/google';
+  
     } catch (error: any) {
       console.error('[디버깅] Google 로그인 초기화 오류:', error);
       
