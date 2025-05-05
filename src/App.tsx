@@ -1,7 +1,6 @@
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   BrowserRouter,
   Routes,
@@ -26,9 +25,6 @@ import GoogleOAuthCallback from "./pages/auth/GoogleOAuthCallback"; // 구글 OA
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import CafeRegistrationPage from "./pages/cafe/CafeRegistrationPage";
 import { useEffect } from "react";
-
-const queryClient = new QueryClient();
-
 // 인증이 필요한 라우트를 보호하는 컴포넌트
 const ProtectedRoute = ({
   children,
@@ -139,17 +135,15 @@ const AppRoutes = () => {
 
 // 메인 App 컴포넌트
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <TooltipProvider>
-        <AuthProvider>
-          <AppRoutes />
-          <Toaster />
-          <Sonner />
-        </AuthProvider>
-      </TooltipProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+  <BrowserRouter>
+    <TooltipProvider>
+      <AuthProvider>
+        <AppRoutes />
+        <Toaster />
+        <Sonner />
+      </AuthProvider>
+    </TooltipProvider>
+  </BrowserRouter>
 );
 
 export default App;
