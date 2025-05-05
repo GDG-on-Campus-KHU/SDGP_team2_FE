@@ -112,7 +112,7 @@ const CafeDashboard = () => {
       try {
         // 현재는 cafeId=2로 고정해서 요청
         const cafeId = 2;
-        const response = await apiClient.get(`/api/cafes/${cafeId}`);
+        const response = await apiClient.get(`/api/cafes/me`);
 
         console.log("[디버깅] 카페 정보 가져오기 성공:", response.data);
 

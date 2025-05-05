@@ -72,6 +72,7 @@ interface CoffeeGround {
   groundId: number;
   date: string;
   totalAmount: number;
+  startDateTime: string;
   remainingAmount: number;
   note: string;
   status: string;
@@ -267,6 +268,7 @@ const CafeGroundsPage = () => {
       // API 요청 데이터 구성
       const groundData = {
         amount: values.amount,
+        startDateTime: new Date().toISOString(),
         note: values.note || "",
         beanId: parseInt(values.beanId),
       };
@@ -585,7 +587,8 @@ const CafeGroundsPage = () => {
                   <div>
                     <div className="flex items-center space-x-4">
                       <div className="text-lg font-medium text-coffee-dark">
-                        {format(new Date(ground.date), "PPP", { locale: ko })}
+                        {ground.startDateTime.split("T")[0]}
+                        {/* {format(new Date(ground.), "PPP", { locale: ko })} */}
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
