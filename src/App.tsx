@@ -54,43 +54,48 @@ const ProtectedRoute = ({
   return children;
 };
 
-// 카페 등록 체크
-const CafeRegistrationCheck = ({ children }) => {
-  const { userType, hasCafeRegistered, checkCafeRegistration } = useAuth();
+// AppRoutes를 별도의 컴포넌트로 분리
+const AppRoutes = () => {
+  const {
+    isAuthenticated,
+    userType,
+    isLoading,
+    hasCafeRegistered,
+    checkCafeRegistration,
+  } = useAuth();
   const navigate = useNavigate();
 
+  // 카페 등록 상태 확인
   useEffect(() => {
-    if (userType === "cafe") {
-      const checkRegistration = async () => {
+    const checkCafeStatus = async () => {
+      if (userType === "cafe" && isAuthenticated && !hasCafeRegistered) {
         const isRegistered = await checkCafeRegistration();
         if (!isRegistered) {
           navigate("/cafe/register", { replace: true });
         }
-      };
+      }
+    };
 
-      checkRegistration();
+    if (!isLoading) {
+      checkCafeStatus();
     }
-  }, [userType, checkCafeRegistration, navigate]);
+  }, [
+    isAuthenticated,
+    userType,
+    isLoading,
+    hasCafeRegistered,
+    checkCafeRegistration,
+    navigate,
+  ]);
 
-  return <>{children}</>;
-};
-
-const AppRoutes = () => {
-  const { isAuthenticated, userType, isLoading, hasCafeRegistered } = useAuth();
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />{" "}
-      {/* 새 회원가입 페이지로 변경 */}
-      <Route
-        path="/oauth/google/callback"
-        element={<GoogleOAuthCallback />}
-      />{" "}
-      {/* 구글 OAuth 콜백 추가 */}
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/oauth/google/callback" element={<GoogleOAuthCallback />} />
+
       {/* 카페 등록 페이지 */}
-      {/* 카페 등록 페이지 - 카페 유저만 접근 가능 */}
-      {/* 카페 등록 페이지 - 카페 유저만 접근 가능 */}
       <Route
         path="/cafe/register"
         element={
@@ -99,27 +104,24 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* 카페 관련 모든 페이지에 등록 상태 체크 적용 */}
+
+      {/* 카페 마이페이지 */}
       <Route
         path="/cafe"
         element={
           <ProtectedRoute requiredType="cafe">
-            <CafeRegistrationCheck>
-              <CafeManagementPage />
-            </CafeRegistrationCheck>
+            <CafeManagementPage />
           </ProtectedRoute>
         }
       >
         {/* 루트 경로 리다이렉트 */}
         <Route index element={<Navigate to="/cafe/dashboard" replace />} />
-        {/* 하위 라우트들 */}
         <Route path="dashboard" element={<CafeDashboard />} />
         <Route path="beans" element={<CafeBeansPage />} />
         <Route path="grounds" element={<CafeGroundsPage />} />
         <Route path="requests" element={<CafeRequestsPage />} />
         <Route path="settings" element={<CafeSettingsPage />} />
       </Route>
-      {/* 사용자 라우트 */}
       <Route
         path="/mypage"
         element={
@@ -130,12 +132,12 @@ const AppRoutes = () => {
       />
       <Route path="/ai-solutions" element={<AISolutionsPage />} />
       <Route path="/market" element={<MarketPage />} />
-      {/* 404 페이지 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
 
+// 메인 App 컴포넌트
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>

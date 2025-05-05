@@ -110,8 +110,6 @@ const CafeDashboard = () => {
       setError(null);
 
       try {
-        // 현재는 cafeId=2로 고정해서 요청
-        const cafeId = 2;
         const response = await apiClient.get(`/api/cafes/me`);
 
         console.log("[디버깅] 카페 정보 가져오기 성공:", response.data);
@@ -123,14 +121,6 @@ const CafeDashboard = () => {
         }
       } catch (error: any) {
         console.error("[디버깅] 카페 정보 가져오기 오류:", error);
-
-        // let errorMessage = "카페 정보를 가져오는 중 오류가 발생했습니다.";
-
-        // if (error.response) {
-        //   errorMessage = error.response.data?.message || errorMessage;
-        // }
-
-        // setError(errorMessage);
 
         toast({
           title: "카페 정보 로딩 실패",

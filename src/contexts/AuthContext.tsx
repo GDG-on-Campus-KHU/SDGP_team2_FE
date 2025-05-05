@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return saved === "true";
   });
 
-  // 카페 저장
+  // 카페 등록 여부 변경
   const setCafeRegistered = (value: boolean) => {
     setHasCafeRegistered(value);
     localStorage.setItem(CAFE_REGISTERED_KEY, value.toString());
@@ -111,12 +111,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(userData);
     localStorage.setItem(USER_KEY, JSON.stringify(userData));
 
-    // Reset cafe registration status on login
     if (userData.userType === "cafe") {
-      // We'll set this to false initially and then check with the API
       setCafeRegistered(false);
-
-      // Check if the cafe is already registered
       checkCafeRegistration();
     }
 
@@ -136,13 +132,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // 카페 등록 상태 확인 함수 - /api/cafes/me/exists API 사용
+  // 카페 등록 상태 확인 함수
   const checkCafeRegistration = async (): Promise<boolean> => {
     try {
-      // 새로운 API 엔드포인트 사용
       const response = await apiClient.get("/api/cafes/me/exists");
-
-      // response.data.data 값이 true/false 인지 확인
       const isRegistered = response.data.data === true;
       setCafeRegistered(isRegistered);
       return isRegistered;
@@ -206,11 +199,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    // If user is a cafe, check registration status on component mount
-    if (user && user.userType === "cafe") {
+    // 카페 유저 타입이고, 아직 등록 상태가 확인되지 않은 경우에만 확인
+    if (user && user.userType === "cafe" && !hasCafeRegistered) {
       checkCafeRegistration();
     }
-  }, [user]);
+  }, [user, hasCafeRegistered]);
 
   const value = {
     user,
