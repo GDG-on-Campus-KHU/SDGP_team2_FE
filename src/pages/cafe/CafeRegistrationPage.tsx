@@ -141,17 +141,8 @@ const CafeRegistrationPage = () => {
       if (!token) {
         throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
       }
-
-      // Prepare the request data
-      const cafeData = {
-        ...values,
-        // Include member ID from user context
-        memberId: user?.id,
-        // Add the logo image if available
-      };
-
       // Make API call
-      const response = await apiClient.post("/api/cafes", cafeData);
+      const response = await apiClient.post("/api/cafes", values);
 
       console.log("[디버깅] 카페 등록 성공:", response.data);
 

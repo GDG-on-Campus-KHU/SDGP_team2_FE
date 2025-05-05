@@ -24,10 +24,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userType: UserType;
   login: (userData: AuthUser) => void;
-  hasCafeRegistered: boolean;
   logout: () => void;
   isLoading: boolean;
   refreshToken: () => Promise<boolean>;
+  hasCafeRegistered: boolean;
+  checkCafeRegistration: () => Promise<boolean>;
   setCafeRegistered: (value: boolean) => void;
 }
 
@@ -49,6 +50,7 @@ interface AuthProviderProps {
 const ACCESS_TOKEN_KEY = "accessToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const USER_KEY = "user";
+const CAFE_REGISTERED_KEY = "hasCafeRegistered";
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -62,13 +64,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // 카페 등록 여부 저장
   const [hasCafeRegistered, setHasCafeRegistered] = useState<boolean>(() => {
-    return localStorage.getItem("hasCafeRegistered") === "true";
+    const saved = localStorage.getItem(CAFE_REGISTERED_KEY);
+    return saved === "true";
   });
 
   // 카페 저장
   const setCafeRegistered = (value: boolean) => {
     setHasCafeRegistered(value);
-    localStorage.setItem("hasCafeRegistered", value.toString());
+    localStorage.setItem(CAFE_REGISTERED_KEY, value.toString());
   };
 
   const isAuthenticated = !!user;
@@ -86,6 +89,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       try {
         setIsLoading(false);
+
+        // 카페 유저인 경우 등록 상태 확인
+        if (user && user.userType === "cafe") {
+          checkCafeRegistration();
+        }
       } catch (error) {
         console.error("Token verification failed:", error);
         localStorage.removeItem(ACCESS_TOKEN_KEY);
@@ -109,7 +117,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setCafeRegistered(false);
 
       // Check if the cafe is already registered
-      //checkCafeRegistration(userData.id);
+      checkCafeRegistration();
     }
 
     toast({
@@ -128,26 +136,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // const checkCafeRegistration = async (userId: string) => {
-  //   try {
-  //     const response = await apiClient.get(`/api/cafes/member/${userId}`);
+  // 카페 등록 상태 확인 함수 - /api/cafes/me/exists API 사용
+  const checkCafeRegistration = async (): Promise<boolean> => {
+    try {
+      // 새로운 API 엔드포인트 사용
+      const response = await apiClient.get("/api/cafes/me/exists");
 
-  //     if (response.data && response.data.id) {
-  //       setCafeRegistered(true);
-  //     } else {
-  //       setCafeRegistered(false);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error checking cafe registration:", error);
-  //     setCafeRegistered(false);
-  //   }
-  // };
+      // response.data.data 값이 true/false 인지 확인
+      const isRegistered = response.data.data === true;
+      setCafeRegistered(isRegistered);
+      return isRegistered;
+    } catch (error) {
+      console.error("Error checking cafe registration:", error);
+      setCafeRegistered(false);
+      return false;
+    }
+  };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(CAFE_REGISTERED_KEY);
+    setHasCafeRegistered(false);
 
     toast({
       title: "로그아웃 완료",
@@ -193,12 +205,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // useEffect(() => {
-  //   // If user is a cafe, check registration status on component mount
-  //   if (user && user.userType === "cafe") {
-  //     checkCafeRegistration(user.id);
-  //   }
-  // }, [user]);
+  useEffect(() => {
+    // If user is a cafe, check registration status on component mount
+    if (user && user.userType === "cafe") {
+      checkCafeRegistration();
+    }
+  }, [user]);
 
   const value = {
     user,
@@ -208,6 +220,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     isLoading,
     refreshToken,
+    hasCafeRegistered,
+    checkCafeRegistration,
+    setCafeRegistered,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

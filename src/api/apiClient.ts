@@ -7,7 +7,7 @@ import axios, {
 // 프록시 사용을 위해 기본 URL을 비워둡니다
 // 개발 환경: 빈 문자열 사용
 // 프로덕션 환경: 실제 API URL 사용 (배포 시 수정 필요)
-const API_BASE_URL = "http://35.216.4.12:8080";
+const API_BASE_URL = "http://34.64.59.141:8080";
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,

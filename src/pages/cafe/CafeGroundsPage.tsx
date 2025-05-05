@@ -362,21 +362,22 @@ const CafeGroundsPage = () => {
   // 찌꺼기 삭제 처리
   const handleDelete = async (groundId: number) => {
     try {
-      try {
-        await apiClient.delete(`/api/coffee_grounds/${groundId}`);
-        console.log("[디버깅] 찌꺼기 삭제 성공:", groundId);
-      } catch (error) {
-        console.error(
-          "[디버깅] 찌꺼기 삭제 API 실패. 클라이언트에서만 삭제합니다:",
-          error
-        );
+      await apiClient.delete(`/api/coffee_grounds/${groundId}`);
+      console.log("[디버깅] 찌꺼기 삭제 성공:", groundId);
 
-        toast({
-          title: "API 연결 실패",
-          description: "서버에서 삭제하지 못했지만 화면에서 항목을 제거합니다.",
-          duration: 3000,
-        });
-      }
+      // 성공 시에도 UI에서 항목 삭제
+      setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
+    } catch (error) {
+      console.error(
+        "[디버깅] 찌꺼기 삭제 API 실패. 클라이언트에서만 삭제합니다:",
+        error
+      );
+
+      toast({
+        title: "API 연결 실패",
+        description: "서버에서 삭제하지 못했지만 화면에서 항목을 제거합니다.",
+        duration: 3000,
+      });
 
       // 삭제된 찌꺼기를 목록에서 제거
       setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
@@ -384,21 +385,6 @@ const CafeGroundsPage = () => {
       toast({
         title: "삭제 완료",
         description: "선택한 찌꺼기 등록이 삭제되었습니다.",
-        duration: 3000,
-      });
-    } catch (error: any) {
-      console.error("[디버깅] 찌꺼기 삭제 처리 중 예상치 못한 오류:", error);
-
-      let errorMessage = "찌꺼기 삭제 중 오류가 발생했습니다.";
-
-      if (error.response) {
-        errorMessage = error.response.data?.message || errorMessage;
-      }
-
-      toast({
-        title: "찌꺼기 삭제 실패",
-        description: errorMessage,
-        variant: "destructive",
         duration: 3000,
       });
     }

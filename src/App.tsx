@@ -2,7 +2,13 @@ import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage"; // 새 회원가입 페이지 추가
@@ -19,6 +25,7 @@ import MarketPage from "./pages/MarketPage";
 import GoogleOAuthCallback from "./pages/auth/GoogleOAuthCallback"; // 구글 OAuth 콜백 추가
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import CafeRegistrationPage from "./pages/cafe/CafeRegistrationPage";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +54,27 @@ const ProtectedRoute = ({
   return children;
 };
 
+// 카페 등록 체크
+const CafeRegistrationCheck = ({ children }) => {
+  const { userType, hasCafeRegistered, checkCafeRegistration } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (userType === "cafe") {
+      const checkRegistration = async () => {
+        const isRegistered = await checkCafeRegistration();
+        if (!isRegistered) {
+          navigate("/cafe/register", { replace: true });
+        }
+      };
+
+      checkRegistration();
+    }
+  }, [userType, checkCafeRegistration, navigate]);
+
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   const { isAuthenticated, userType, isLoading, hasCafeRegistered } = useAuth();
   return (
@@ -61,27 +89,30 @@ const AppRoutes = () => {
       />{" "}
       {/* 구글 OAuth 콜백 추가 */}
       {/* 카페 등록 페이지 */}
+      {/* 카페 등록 페이지 - 카페 유저만 접근 가능 */}
+      {/* 카페 등록 페이지 - 카페 유저만 접근 가능 */}
       <Route
         path="/cafe/register"
-        // element={
-        //   <ProtectedRoute requiredType="cafe">
-        //     <CafeRegistrationPage />
-        //   </ProtectedRoute>
-        // }
+        element={
+          <ProtectedRoute requiredType="cafe">
+            <CafeRegistrationPage />
+          </ProtectedRoute>
+        }
       />
-      {/* 카페 관리자 라우트 */}
+      {/* 카페 관련 모든 페이지에 등록 상태 체크 적용 */}
       <Route
         path="/cafe"
         element={
-          // <ProtectedRoute requiredType="cafe">
-          //   {!hasCafeRegistered ? (
-          //     <Navigate to="/cafe/register" replace />
-          //   ) : (
-          <CafeManagementPage />
-          //   )}
-          // </ProtectedRoute>
+          <ProtectedRoute requiredType="cafe">
+            <CafeRegistrationCheck>
+              <CafeManagementPage />
+            </CafeRegistrationCheck>
+          </ProtectedRoute>
         }
       >
+        {/* 루트 경로 리다이렉트 */}
+        <Route index element={<Navigate to="/cafe/dashboard" replace />} />
+        {/* 하위 라우트들 */}
         <Route path="dashboard" element={<CafeDashboard />} />
         <Route path="beans" element={<CafeBeansPage />} />
         <Route path="grounds" element={<CafeGroundsPage />} />

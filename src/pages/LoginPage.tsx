@@ -91,7 +91,7 @@ const LoginPage = () => {
 
       // 상대 경로 사용 (프록시 적용)
       const response = await axios.post(
-        "http://35.216.4.12:8080/api/auth/login",
+        "http://34.64.59.141:8080/api/auth/login",
         {
           username: username.trim(),
           password: password,
