@@ -119,7 +119,7 @@ const CafeDashboard = () => {
         } else {
           setError("카페 정보를 가져오는데 실패했습니다.");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 카페 정보 가져오기 오류:", error);
 
         toast({
@@ -157,7 +157,7 @@ const CafeDashboard = () => {
         if (response.data && response.data.data) {
           setPickupRequests(response.data.data);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 픽업 리스트 조회 오류:", error);
         setPickupRequests([
           {

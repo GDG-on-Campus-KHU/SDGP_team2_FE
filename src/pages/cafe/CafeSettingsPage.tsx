@@ -102,7 +102,7 @@ const CafeSettingsPage = () => {
             collectSchedule: cafeData.collectSchedule || "",
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 카페 정보 조회 오류:", error);
 
         toast({
@@ -126,7 +126,7 @@ const CafeSettingsPage = () => {
 
       const response = await apiClient.put(`/api/cafes`, values);
       console.log("[디버깅] 카페 정보 업데이트 성공:", response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 카페 정보 업데이트 오류:", error);
 
       toast({

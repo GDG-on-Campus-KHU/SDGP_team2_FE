@@ -41,7 +41,7 @@ const LoginPage = () => {
         console.log("[디버깅] Google 로그인 URL 획득 성공:", response.data);
         window.location.href = response.data;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] Google 로그인 초기화 오류:", error);
 
       // 백엔드 엔드포인트가 존재하지 않는 경우 대체 방법

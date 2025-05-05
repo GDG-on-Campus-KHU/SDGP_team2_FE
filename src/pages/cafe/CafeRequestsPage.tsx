@@ -187,7 +187,7 @@ const CafeRequestsPage = () => {
             duration: 3000,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 수거 요청 조회 중 예상치 못한 오류:", error);
 
         // API가 실패한 경우 더미 데이터 사용
@@ -276,7 +276,7 @@ const CafeRequestsPage = () => {
       });
 
       setIsDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 요청 상태 변경 중 예상치 못한 오류:", error);
 
       const errorMessage = "요청 상태 변경 중 오류가 발생했습니다.";
