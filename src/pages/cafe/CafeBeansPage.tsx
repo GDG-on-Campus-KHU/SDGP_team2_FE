@@ -89,7 +89,7 @@ const CafeBeansPage = () => {
       if (response.data && response.data.data) {
         setBeans((prevBeans) => [...prevBeans, response.data.data]);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 픽업 리스트 조회 오류:", error);
 
       toast({
@@ -125,7 +125,7 @@ const CafeBeansPage = () => {
           duration: 3000,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("[디버깅] 원두 삭제 오류 :", error);
 
       toast({
@@ -147,7 +147,7 @@ const CafeBeansPage = () => {
         if (response.data && response.data.data) {
           setBeans(response.data.data);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 원두 리스트 조회 오류:", error);
 
         setBeans(mockBeans);

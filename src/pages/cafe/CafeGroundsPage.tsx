@@ -72,74 +72,13 @@ interface CoffeeGround {
   groundId: number;
   date: string;
   totalAmount: number;
+  startDateTime: string;
   remainingAmount: number;
   note: string;
   status: string;
   cafeId: number;
   beanId: number;
 }
-
-// 원두 더미 데이터
-const dummyBeans: Bean[] = [
-  {
-    beanId: 1,
-    name: "에티오피아 예가체프",
-    origin: "에티오피아",
-    description: "과일향, 감귤류 산미가 특징인 원두",
-  },
-  {
-    beanId: 2,
-    name: "콜롬비아 수프리모",
-    origin: "콜롬비아",
-    description: "견과류 향과 초콜릿 풍미가 특징인 원두",
-  },
-  {
-    beanId: 3,
-    name: "브라질 산토스",
-    origin: "브라질",
-    description: "고소하고 달콤한 맛이 특징인 원두",
-  },
-  {
-    beanId: 4,
-    name: "과테말라 안티구아",
-    origin: "과테말라",
-    description: "스모키한 향과 중간 산미가 특징인 원두",
-  },
-];
-
-// 찌꺼기 더미 데이터
-const dummyGrounds: CoffeeGround[] = [
-  {
-    groundId: 1,
-    date: new Date().toISOString(),
-    totalAmount: 3.5,
-    remainingAmount: 3.5,
-    note: "아침 영업 후 수거, 습도 적당함",
-    status: "WAITING",
-    cafeId: 1,
-    beanId: 1,
-  },
-  {
-    groundId: 2,
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2일 전
-    totalAmount: 4.2,
-    remainingAmount: 2.0,
-    note: "오후 3시경 수거",
-    status: "WAITING",
-    cafeId: 1,
-    beanId: 2,
-  },
-  {
-    groundId: 3,
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5일 전
-    totalAmount: 2.8,
-    remainingAmount: 0,
-    note: "",
-    status: "COLLECTED",
-    cafeId: 1,
-    beanId: 3,
-  },
-];
 
 const CafeGroundsPage = () => {
   const { toast } = useToast();
@@ -177,14 +116,12 @@ const CafeGroundsPage = () => {
             console.warn(
               "[디버깅] 원두 목록 응답에 data가 없습니다. 더미 데이터를 사용합니다."
             );
-            beansData = dummyBeans;
           }
         } catch (error) {
           console.error(
             "[디버깅] 원두 목록 조회 실패. 더미 데이터를 사용합니다:",
             error
           );
-          beansData = dummyBeans;
 
           toast({
             title: "원두 목록 로딩 실패",
@@ -210,14 +147,12 @@ const CafeGroundsPage = () => {
             console.warn(
               "[디버깅] 찌꺼기 목록 응답에 data가 없습니다. 더미 데이터를 사용합니다."
             );
-            groundsData = dummyGrounds;
           }
         } catch (error) {
           console.error(
             "[디버깅] 찌꺼기 목록 조회 실패. 더미 데이터를 사용합니다:",
             error
           );
-          groundsData = dummyGrounds;
 
           toast({
             title: "찌꺼기 목록 로딩 실패",
@@ -228,12 +163,8 @@ const CafeGroundsPage = () => {
 
         // 찌꺼기 데이터 설정
         setGrounds(groundsData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 데이터 조회 중 예상치 못한 오류:", error);
-
-        // 모든 API가 실패한 경우에도 더미 데이터 사용
-        setBeans(dummyBeans);
-        setGrounds(dummyGrounds);
 
         const errorMessage =
           "데이터를 가져오는 중 오류가 발생했습니다. 더미 데이터를 사용합니다.";
@@ -267,6 +198,7 @@ const CafeGroundsPage = () => {
       // API 요청 데이터 구성
       const groundData = {
         amount: values.amount,
+        startDateTime: new Date().toISOString(),
         note: values.note || "",
         beanId: parseInt(values.beanId),
       };
@@ -285,39 +217,12 @@ const CafeGroundsPage = () => {
 
         if (response.data && response.data.data) {
           newGround = response.data.data;
-        } else {
-          // API는 성공했지만 데이터가 없는 경우 더미 데이터 생성
-          console.warn(
-            "[디버깅] 찌꺼기 등록 응답에 data가 없습니다. 더미 데이터를 생성합니다."
-          );
-          newGround = {
-            groundId: Date.now(),
-            date: new Date().toISOString(),
-            totalAmount: values.amount,
-            remainingAmount: values.amount,
-            note: values.note || "",
-            status: "WAITING",
-            cafeId: 1,
-            beanId: parseInt(values.beanId),
-          };
         }
       } catch (error) {
         console.error(
           "[디버깅] 찌꺼기 등록 API 실패. 더미 데이터를 생성합니다:",
           error
         );
-
-        // API 실패 시 더미 데이터 생성
-        newGround = {
-          groundId: Date.now(),
-          date: new Date().toISOString(),
-          totalAmount: values.amount,
-          remainingAmount: values.amount,
-          note: values.note || "",
-          status: "WAITING",
-          cafeId: 1,
-          beanId: parseInt(values.beanId),
-        };
 
         toast({
           title: "API 연결 실패",
@@ -341,18 +246,12 @@ const CafeGroundsPage = () => {
         beanId: "",
         note: "",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 찌꺼기 등록 처리 중 예상치 못한 오류:", error);
-
-      let errorMessage = "찌꺼기 등록 중 오류가 발생했습니다.";
-
-      if (error.response) {
-        errorMessage = error.response.data?.message || errorMessage;
-      }
 
       toast({
         title: "찌꺼기 등록 실패",
-        description: errorMessage,
+        description: "찌꺼기를 등록하지 못했습니다.",
         variant: "destructive",
         duration: 3000,
       });
@@ -362,21 +261,22 @@ const CafeGroundsPage = () => {
   // 찌꺼기 삭제 처리
   const handleDelete = async (groundId: number) => {
     try {
-      try {
-        await apiClient.delete(`/api/coffee_grounds/${groundId}`);
-        console.log("[디버깅] 찌꺼기 삭제 성공:", groundId);
-      } catch (error) {
-        console.error(
-          "[디버깅] 찌꺼기 삭제 API 실패. 클라이언트에서만 삭제합니다:",
-          error
-        );
+      await apiClient.delete(`/api/coffee_grounds/${groundId}`);
+      console.log("[디버깅] 찌꺼기 삭제 성공:", groundId);
 
-        toast({
-          title: "API 연결 실패",
-          description: "서버에서 삭제하지 못했지만 화면에서 항목을 제거합니다.",
-          duration: 3000,
-        });
-      }
+      // 성공 시에도 UI에서 항목 삭제
+      setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
+    } catch (error) {
+      console.error(
+        "[디버깅] 찌꺼기 삭제 API 실패. 클라이언트에서만 삭제합니다:",
+        error
+      );
+
+      toast({
+        title: "API 연결 실패",
+        description: "서버에서 삭제하지 못했지만 화면에서 항목을 제거합니다.",
+        duration: 3000,
+      });
 
       // 삭제된 찌꺼기를 목록에서 제거
       setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
@@ -384,21 +284,6 @@ const CafeGroundsPage = () => {
       toast({
         title: "삭제 완료",
         description: "선택한 찌꺼기 등록이 삭제되었습니다.",
-        duration: 3000,
-      });
-    } catch (error: any) {
-      console.error("[디버깅] 찌꺼기 삭제 처리 중 예상치 못한 오류:", error);
-
-      let errorMessage = "찌꺼기 삭제 중 오류가 발생했습니다.";
-
-      if (error.response) {
-        errorMessage = error.response.data?.message || errorMessage;
-      }
-
-      toast({
-        title: "찌꺼기 삭제 실패",
-        description: errorMessage,
-        variant: "destructive",
         duration: 3000,
       });
     }
@@ -599,7 +484,8 @@ const CafeGroundsPage = () => {
                   <div>
                     <div className="flex items-center space-x-4">
                       <div className="text-lg font-medium text-coffee-dark">
-                        {format(new Date(ground.date), "PPP", { locale: ko })}
+                        {ground.startDateTime.split("T")[0]}
+                        {/* {format(new Date(ground.), "PPP", { locale: ko })} */}
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${

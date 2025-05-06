@@ -140,44 +140,21 @@ const CafeRequestsPage = () => {
       setError(null);
 
       try {
-        // 모든 상태의 요청 데이터를 병렬로 가져오기
-        const statuses = ["PENDING", "ACCEPTED", "COMPLETED", "REJECTED"];
+        // 한 번만 API 호출
+        const response = await apiClient.get("/api/cafe/pickups");
 
-        // 모든 요청을 병렬로 실행
-        const requestPromises = statuses.map((status) =>
-          apiClient
-            .get("/api/cafe/pickups")
-            .then((response) => {
-              console.log(`[디버깅] ${status} 요청 조회 성공:`, response.data);
-              if (response.data && response.data.data) {
-                // API에서 고유 ID를 제공하지 않으므로 임의의 ID 부여
-                return response.data.data.map(
-                  (item: PickupRequest, index: number) => ({
-                    ...item,
-                    pickupId: Date.now() + index, // 임시 ID 생성
-                  })
-                );
-              }
-              return [];
-            })
-            .catch((error) => {
-              console.error(`[디버깅] ${status} 요청 조회 실패:`, error);
-              return [];
-            })
-        );
+        console.log(`[디버깅] 요청 조회 성공:`, response.data);
 
-        // 모든 요청 기다리기
-        const results = await Promise.all(requestPromises);
-
-        // 결과 합치기
-        const allRequests = results.flat();
-
-        if (allRequests.length > 0) {
-          setRequests(allRequests);
+        if (
+          response.data &&
+          response.data.data &&
+          response.data.data.length > 0
+        ) {
+          setRequests(response.data.data);
         } else {
-          // 모든 API 요청이 실패했거나 결과가 없는 경우 더미 데이터 사용
+          // API 응답이 없는 경우 더미 데이터 사용
           console.warn(
-            "[디버깅] 모든 API 요청이 실패했거나 결과가 없습니다. 더미 데이터를 사용합니다."
+            "[디버깅] API 응답에 데이터가 없습니다. 더미 데이터를 사용합니다."
           );
           setRequests(dummyRequests);
 
@@ -187,7 +164,7 @@ const CafeRequestsPage = () => {
             duration: 3000,
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 수거 요청 조회 중 예상치 못한 오류:", error);
 
         // API가 실패한 경우 더미 데이터 사용
@@ -239,7 +216,7 @@ const CafeRequestsPage = () => {
       // API 호출하여 상태 변경
       try {
         // API 엔드포인트는 실제 백엔드 API에 맞게 수정 필요
-        await apiClient.put(`/api/cafe/pickups/${pickupId}/status`, {
+        await apiClient.put(`/api/pickups/${pickupId}/status`, {
           status: newStatus,
         });
 
@@ -276,7 +253,7 @@ const CafeRequestsPage = () => {
       });
 
       setIsDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 요청 상태 변경 중 예상치 못한 오류:", error);
 
       const errorMessage = "요청 상태 변경 중 오류가 발생했습니다.";

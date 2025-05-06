@@ -62,15 +62,6 @@ const CafeDashboard = () => {
   const [pickupRequests, setPickupRequests] = useState<PickupRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 카페 통계 데이터 (실제로는 API에서 가져올 데이터)
-  const cafeStats = {
-    totalCollections: 34,
-    totalGrounds: "85L",
-    groundThisMonth: "15L",
-    ecoContribution: 12.5, // CO2 절감량 (kg)
-    lastGroundUpdate: "2023-12-01",
-  };
-
   // 상태에 따른 UI 표시 클래스 매핑
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -110,9 +101,7 @@ const CafeDashboard = () => {
       setError(null);
 
       try {
-        // 현재는 cafeId=2로 고정해서 요청
-        const cafeId = 2;
-        const response = await apiClient.get(`/api/cafes/${cafeId}`);
+        const response = await apiClient.get(`/api/cafes/me`);
 
         console.log("[디버깅] 카페 정보 가져오기 성공:", response.data);
 
@@ -121,36 +110,14 @@ const CafeDashboard = () => {
         } else {
           setError("카페 정보를 가져오는데 실패했습니다.");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 카페 정보 가져오기 오류:", error);
-
-        // let errorMessage = "카페 정보를 가져오는 중 오류가 발생했습니다.";
-
-        // if (error.response) {
-        //   errorMessage = error.response.data?.message || errorMessage;
-        // }
-
-        // setError(errorMessage);
 
         toast({
           title: "카페 정보 로딩 실패",
           description: "카페 정보를 가져오는 중 오류가 발생했습니다.",
           variant: "destructive",
           duration: 3000,
-        });
-
-        setCafeInfo({
-          cafeId: 2,
-          memberId: 8,
-          name: "스타벅스",
-          address: "강남 테헤란구",
-          detailAddress: "몰라",
-          latitude: 37,
-          longitude: 24,
-          phone: "010-2260-7370",
-          collectSchedule: "2시~5시",
-          openHours: "오전 8시",
-          description: "안녕하세요",
         });
       } finally {
         setLoading(false);
@@ -167,18 +134,8 @@ const CafeDashboard = () => {
         if (response.data && response.data.data) {
           setPickupRequests(response.data.data);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 픽업 리스트 조회 오류:", error);
-        setPickupRequests([
-          {
-            requesterName: "혜미",
-            requestDate: "2025-05-04",
-            pickupDate: "2025-05-04",
-            beanName: "에티오피아 어쩌구",
-            amount: 10,
-            status: "PENDING",
-          },
-        ]);
 
         toast({
           title: "픽업 리스트 정보 로딩 실패",

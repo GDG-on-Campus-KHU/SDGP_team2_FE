@@ -85,7 +85,7 @@ const CafeSettingsPage = () => {
     const fetchCafeData = async () => {
       setLoading(true);
       try {
-        const response = await apiClient.get(`/api/cafes/${cafeId}`);
+        const response = await apiClient.get(`/api/cafes/me`);
         console.log("[디버깅] 카페 정보 조회 성공:", response.data);
 
         if (response.data && response.data.data) {
@@ -102,7 +102,7 @@ const CafeSettingsPage = () => {
             collectSchedule: cafeData.collectSchedule || "",
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("[디버깅] 카페 정보 조회 오류:", error);
 
         toast({
@@ -124,9 +124,9 @@ const CafeSettingsPage = () => {
     try {
       console.log("[디버깅] 카페 정보 업데이트 요청:", values);
 
-      const response = await apiClient.put(`/api/cafes/${cafeId}`, values);
+      const response = await apiClient.put(`/api/cafes`, values);
       console.log("[디버깅] 카페 정보 업데이트 성공:", response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 카페 정보 업데이트 오류:", error);
 
       toast({

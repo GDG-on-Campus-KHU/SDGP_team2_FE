@@ -141,17 +141,8 @@ const CafeRegistrationPage = () => {
       if (!token) {
         throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
       }
-
-      // Prepare the request data
-      const cafeData = {
-        ...values,
-        // Include member ID from user context
-        memberId: user?.id,
-        // Add the logo image if available
-      };
-
       // Make API call
-      const response = await apiClient.post("/api/cafes", cafeData);
+      const response = await apiClient.post("/api/cafes", values);
 
       console.log("[디버깅] 카페 등록 성공:", response.data);
 
@@ -163,20 +154,12 @@ const CafeRegistrationPage = () => {
 
       // Redirect to the cafe dashboard
       navigate("/cafe/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[디버깅] 카페 등록 오류:", error);
-
-      let errorMessage = "카페 등록 중 오류가 발생했습니다.";
-
-      if (error.response) {
-        // Server responded with an error
-        errorMessage = error.response.data?.message || errorMessage;
-        console.error("[디버깅] 서버 응답:", error.response.data);
-      }
 
       toast({
         title: "카페 등록 실패",
-        description: errorMessage,
+        description: "카페 등록시 오류가 발생했습니다.",
         variant: "destructive",
         duration: 3000,
       });
