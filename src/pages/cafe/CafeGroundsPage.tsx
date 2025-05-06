@@ -489,7 +489,7 @@ const CafeGroundsPage = () => {
                       </div>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
-                          ground.status === "COLLECTED"
+                          ground?.status === "COLLECTED"
                             ? "bg-green-100 text-green-800"
                             : ground.status === "WAITING"
                             ? "bg-yellow-100 text-yellow-800"
