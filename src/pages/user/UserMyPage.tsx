@@ -56,66 +56,7 @@ interface CollectionRequest {
 }
 
 // 모의 수거 신청 데이터
-const mockRequests: CollectionRequest[] = [
-  {
-    id: 1,
-    cafeId: 'cafe1',
-    cafeName: '스타벅스 강남점',
-    cafeAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=cafe1',
-    date: new Date(2023, 11, 10),
-    requestDate: new Date(2023, 11, 5),
-    status: 'pending',
-    amount: 3.5,
-    message: '오전 10시에 방문할 예정입니다.',
-    beanType: '에티오피아 예가체프'
-  },
-  {
-    id: 2,
-    cafeId: 'cafe2',
-    cafeName: '커피빈 선릉점',
-    cafeAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=cafe2',
-    date: new Date(2023, 11, 8),
-    requestDate: new Date(2023, 11, 4),
-    status: 'accepted',
-    amount: 2.0,
-    beanType: '콜롬비아 수프리모'
-  },
-  {
-    id: 3,
-    cafeId: 'cafe3',
-    cafeName: '블루보틀 삼청점',
-    cafeAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=cafe3',
-    date: new Date(2023, 11, 3),
-    requestDate: new Date(2023, 11, 1),
-    status: 'completed',
-    amount: 4.0,
-    message: '방향제 만들기 위해 수거했습니다.',
-    beanType: '브라질 산토스'
-  },
-  {
-    id: 4,
-    cafeId: 'cafe4',
-    cafeName: '이디야 서초점',
-    cafeAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=cafe4',
-    date: new Date(2023, 10, 25),
-    requestDate: new Date(2023, 10, 20),
-    status: 'rejected',
-    amount: 5.0,
-    message: '학교 프로젝트에 활용하고 싶습니다.',
-    beanType: '에티오피아 예가체프'
-  },
-  {
-    id: 5,
-    cafeId: 'cafe5',
-    cafeName: '그린 카페',
-    cafeAvatar: 'https://api.dicebear.com/7.x/shapes/svg?seed=cafe5',
-    date: new Date(2023, 10, 20),
-    requestDate: new Date(2023, 10, 18),
-    status: 'completed',
-    amount: 2.5,
-    beanType: '과테말라 안티구아'
-  },
-];
+const mockRequests: CollectionRequest[] = [];
 
 // 환경 리포트 데이터
 const ecoReport = {
@@ -215,19 +156,6 @@ const UserMyPage = () => {
               <div className="text-3xl font-bold text-eco">{ecoReport.carbonSaved}kg</div>
               <p className="text-xs text-muted-foreground mt-1">
                 커피 찌꺼기 1L당 약 0.6kg의 CO2 절감 효과
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">환경 기여 레벨</CardTitle>
-              <CardDescription>{ecoReport.level}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Progress value={ecoReport.levelProgress} className="h-2 mb-2" />
-              <p className="text-xs text-muted-foreground">
-                다음 레벨까지 {(100 - ecoReport.levelProgress).toFixed(0)}% 남았습니다
               </p>
             </CardContent>
           </Card>
