@@ -62,15 +62,6 @@ const CafeDashboard = () => {
   const [pickupRequests, setPickupRequests] = useState<PickupRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 카페 통계 데이터 (실제로는 API에서 가져올 데이터)
-  const cafeStats = {
-    totalCollections: 34,
-    totalGrounds: "85L",
-    groundThisMonth: "15L",
-    ecoContribution: 12.5, // CO2 절감량 (kg)
-    lastGroundUpdate: "2023-12-01",
-  };
-
   // 상태에 따른 UI 표시 클래스 매핑
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -128,20 +119,6 @@ const CafeDashboard = () => {
           variant: "destructive",
           duration: 3000,
         });
-
-        setCafeInfo({
-          cafeId: 2,
-          memberId: 8,
-          name: "스타벅스",
-          address: "강남 테헤란구",
-          detailAddress: "몰라",
-          latitude: 37,
-          longitude: 24,
-          phone: "010-2260-7370",
-          collectSchedule: "2시~5시",
-          openHours: "오전 8시",
-          description: "안녕하세요",
-        });
       } finally {
         setLoading(false);
       }
@@ -159,16 +136,6 @@ const CafeDashboard = () => {
         }
       } catch (error: unknown) {
         console.error("[디버깅] 픽업 리스트 조회 오류:", error);
-        setPickupRequests([
-          {
-            requesterName: "혜미",
-            requestDate: "2025-05-04",
-            pickupDate: "2025-05-04",
-            beanName: "에티오피아 어쩌구",
-            amount: 10,
-            status: "PENDING",
-          },
-        ]);
 
         toast({
           title: "픽업 리스트 정보 로딩 실패",
