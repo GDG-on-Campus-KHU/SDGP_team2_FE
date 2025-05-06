@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import axios from 'axios';
 import {
   Dialog,
@@ -14,6 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface Location {
   id: number;
@@ -25,6 +29,25 @@ interface Location {
   lat: number;
   lng: number;
   description?: string;
+  openingTime?: string; // 영업 시작 시간 (HH:MM 형식)
+  closingTime?: string; // 영업 종료 시간 (HH:MM 형식)
+}
+
+// 커피 찌꺼기 정보 인터페이스
+interface CoffeeGround {
+  groundId: number;
+  beanType: string;
+  quantity: number; // 전체 수량 (L)
+  remainingQuantity: number; // 남은 수량 (L)
+  registeredDate: string;
+}
+
+// 픽업 요청 인터페이스
+interface PickupRequest {
+  groundId: number;
+  pickupDate: string;
+  pickupTime: string;
+  requestAmount: number;
 }
 
 // 백엔드 API 응답 타입 정의
@@ -56,6 +79,14 @@ interface ApiResponse {
   timestamp: string;
 }
 
+// 커피 찌꺼기 API 응답 타입
+interface GroundsResponse {
+  status: number;
+  code: string;
+  message: string;
+  data: CoffeeGround[];
+}
+
 const MapComponent = () => {
   const [filterValue, setFilterValue] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,40 +96,77 @@ const MapComponent = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const cafeMarkersRef = useRef<google.maps.Marker[]>([]);
   
-  // 픽업 시간 관련 상태 추가
+  // 지도 초기화 상태
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
+  
+  // 픽업 관련 상태
   const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // 오늘 날짜로 초기화
-  const [selectedTime, setSelectedTime] = useState(''); // 빈 문자열로 초기화
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedTime, setSelectedTime] = useState('');
   const [selectedLocationForPickup, setSelectedLocationForPickup] = useState<Location | null>(null);
+  const [selectedGround, setSelectedGround] = useState<number | null>(null);
+  const [requestAmount, setRequestAmount] = useState<number>(1);
+  const [maxAmount, setMaxAmount] = useState<number>(5);
+  const [timeError, setTimeError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const [cafeGrounds, setCafeGrounds] = useState<CoffeeGround[]>([]);
+  const [isLoadingGrounds, setIsLoadingGrounds] = useState(false);
 
   // 백엔드 API에서 카페 목록 가져오기
   const fetchCafes = async () => {
     try {
       setIsLoading(true);
       const response = await axios.get<ApiResponse>('/api/cafes');
-      const cafes = response.data.data.content;
       
-      // API 응답을 Location 인터페이스에 맞게 변환
-      const cafeLocations = cafes.map(cafe => ({
-        id: cafe.cafeId,
-        name: cafe.name,
-        type: 'cafe' as const,
-        address: `${cafe.address} ${cafe.detailAddress}`,
-        hours: cafe.openHours,
-        available: true,
-        lat: cafe.latitude,
-        lng: cafe.longitude,
-        description: cafe.description || `수거 일정: ${cafe.collectSchedule}`,
-      }));
-      
-      setLocations(cafeLocations);
-      toast({ title: '카페 정보 로드 완료', description: `${cafeLocations.length}개의 카페를 찾았습니다.` });
+      // 응답 객체 구조 검증
+      if (response.data && response.data.data && response.data.data.content) {
+        const cafes = response.data.data.content;
+        
+        // API 응답을 Location 인터페이스에 맞게 변환
+        const cafeLocations = cafes.map(cafe => {
+          // 영업시간 파싱 (예: "매일 07:00 - 22:00" → "07:00", "22:00")
+          let openingTime = "09:00";
+          let closingTime = "18:00";
+          
+          const hoursMatch = (cafe.openHours || "").match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+          if (hoursMatch && hoursMatch.length >= 3) {
+            openingTime = hoursMatch[1];
+            closingTime = hoursMatch[2];
+          }
+          
+          return {
+            id: cafe.cafeId,
+            name: cafe.name,
+            type: 'cafe' as const,
+            address: `${cafe.address} ${cafe.detailAddress || ''}`,
+            hours: cafe.openHours || '정보 없음',
+            openingTime,
+            closingTime,
+            available: true,
+            lat: Number(cafe.latitude),
+            lng: Number(cafe.longitude),
+            description: cafe.description || `수거 일정: ${cafe.collectSchedule || '정보 없음'}`,
+          };
+        });
+        
+        setLocations(cafeLocations);
+        toast({ title: '카페 정보 로드 완료', description: `${cafeLocations.length}개의 카페를 찾았습니다.` });
+      } else {
+        toast({ 
+          variant: 'destructive', 
+          title: '데이터 형식 오류', 
+          description: 'API 응답 형식이 예상과 다릅니다. 기본 데이터를 표시합니다.' 
+        });
+        // 응답 형식 오류 시 기본 데이터 사용
+        setLocations(MOCK_LOCATIONS);
+      }
     } catch (error) {
-      console.error('카페 정보 로딩 실패:', error);
       toast({ 
         variant: 'destructive', 
         title: '데이터 로딩 실패', 
@@ -109,6 +177,80 @@ const MapComponent = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // 특정 카페의 커피 찌꺼기 정보 가져오기
+  const fetchCafeGrounds = async (cafeId: number) => {
+    setIsLoadingGrounds(true);
+    try {
+      // API 호출 - 실제 엔드포인트로 수정 필요
+      const response = await axios.get<GroundsResponse>(`/api/cafes/${cafeId}/grounds`);
+      
+      if (response.data && response.data.data) {
+        setCafeGrounds(response.data.data);
+        
+        // 최대 수거 가능량 설정 (가장 많은 찌꺼기의 양)
+        if (response.data.data.length > 0) {
+          const maxAvailable = Math.max(...response.data.data.map(g => g.remainingQuantity));
+          setMaxAmount(maxAvailable);
+          setRequestAmount(Math.min(1, maxAvailable)); // 기본값은 1L 또는 가능한 최대치
+        }
+      } else {
+        // API 응답 형식 오류 시 더미 데이터 사용
+        setCafeGrounds(MOCK_GROUNDS);
+        setMaxAmount(5);
+        setRequestAmount(1);
+      }
+    } catch (error) {
+      console.error('커피 찌꺼기 정보 로딩 실패:', error);
+      // 오류 발생 시 더미 데이터 사용
+      setCafeGrounds(MOCK_GROUNDS);
+      setMaxAmount(5);
+      setRequestAmount(1);
+    } finally {
+      setIsLoadingGrounds(false);
+    }
+  };
+
+  // 지도에 마커 추가하는 함수
+  const addMarkersToMap = () => {
+    if (!mapRef.current || !locations.length) return;
+    
+    // 기존 마커 제거
+    cafeMarkersRef.current.forEach(marker => {
+      marker.setMap(null);
+    });
+    cafeMarkersRef.current = [];
+    
+    // 일반 마커 생성
+    locations.forEach((loc) => {
+      try {
+        // 유효한 좌표 확인
+        if (isNaN(loc.lat) || isNaN(loc.lng)) return;
+        
+        // 마커 생성
+        const marker = new google.maps.Marker({
+          map: mapRef.current,
+          title: loc.name,
+          position: { lat: loc.lat, lng: loc.lng },
+          icon: {
+            url: 'src/assets/coffee_marker.png',
+            scaledSize: new google.maps.Size(32, 32)
+          }
+        });
+        
+        // 일반 click 이벤트 사용
+        marker.addListener('click', () => {
+          console.log('마커 클릭됨:', loc);
+          handleMarkerClick(loc);
+        });
+        
+        // 마커 참조 저장
+        cafeMarkersRef.current.push(marker);
+      } catch (error) {
+        console.error(`마커 생성 실패:`, error);
+      }
+    });
   };
 
   // 사용자 위치 가져오기
@@ -151,50 +293,93 @@ const MapComponent = () => {
     if (!userLocation || mapRef.current || !mapDivRef.current || isLoading) return;
 
     const initMap = async () => {
-      const { Map } = await google.maps.importLibrary('maps') as google.maps.MapsLibrary;
-      const { AdvancedMarkerElement } = await google.maps.importLibrary('marker') as google.maps.MarkerLibrary;
-    
-      const mapInstance = new Map(mapDivRef.current!, {
-        center: userLocation!,
-        zoom: 12,
-        mapId: 'DEMO_MAP_ID',
-      });
-    
-      // 사용자 위치 마커
-      const userMarker = new AdvancedMarkerElement({
-        map: mapInstance,
-        title: '현재 위치',
-        position: userLocation!,
-      });
-    
-      // 카페 위치 마커 추가
-      locations.forEach((loc) => {
-        const marker = new AdvancedMarkerElement({
+      try {
+        // Google Maps API 로드
+        await google.maps.importLibrary('maps');
+        
+        // 맵 인스턴스 생성
+        const mapInstance = new google.maps.Map(mapDivRef.current!, {
+          center: userLocation!,
+          zoom: 12,
+          mapId: 'DEMO_MAP_ID',
+        });
+      
+        // 사용자 위치 마커
+        const userMarker = new google.maps.Marker({
           map: mapInstance,
-          title: loc.name,
-          position: { lat: loc.lat, lng: loc.lng },
+          title: '현재 위치',
+          position: userLocation!,
         });
-    
-        marker.addListener('click', () => {
-          handleMarkerClick(loc);
-        });
-      });
-    
-      mapInstance.addListener('click', (event: google.maps.MapMouseEvent) => {
-        if (event.latLng && markerRef.current) {
-          markerRef.current.position = {
-            lat: event.latLng.lat(),
-            lng: event.latLng.lng(),
-          };
-        }
-      });
-    
-      mapRef.current = mapInstance;
-      markerRef.current = userMarker;
+        
+        // 사용자 마커 참조 저장
+        userMarkerRef.current = userMarker;
+        mapRef.current = mapInstance;
+        setIsMapInitialized(true);
+      
+      } catch (error) {
+        console.error('맵 초기화 오류:', error);
+      }
     };
     
     initMap();
-  }, [userLocation, locations, isLoading]);
+  }, [userLocation, isLoading]);
+  
+  // 지도 초기화된 후 또는 locations 변경될 때 마커 추가
+  useEffect(() => {
+    if (isMapInitialized && locations.length > 0) {
+      addMarkersToMap();
+    }
+  }, [isMapInitialized, locations]);
+
+  // 선택한 시간이 카페 영업시간 내인지 확인
+  const validatePickupTime = () => {
+    if (!selectedLocationForPickup || !selectedTime) {
+      setTimeError(null);
+      return false;
+    }
+    
+    const { openingTime, closingTime } = selectedLocationForPickup;
+    if (!openingTime || !closingTime) {
+      setTimeError('카페 영업 시간 정보가 없습니다.');
+      return false;
+    }
+    
+    // 시간 비교
+    if (selectedTime < openingTime || selectedTime > closingTime) {
+      setTimeError(`영업 시간(${openingTime} - ${closingTime}) 내에 픽업 시간을 선택해주세요.`);
+      return false;
+    }
+    
+    setTimeError(null);
+    return true;
+  };
+
+  // 수거량 검증
+  const validateAmount = () => {
+    if (!selectedGround) {
+      setAmountError('수거할 커피 찌꺼기를 선택해주세요.');
+      return false;
+    }
+    
+    const selectedGroundData = cafeGrounds.find(g => g.groundId === selectedGround);
+    if (!selectedGroundData) {
+      setAmountError('선택한 커피 찌꺼기 정보를 찾을 수 없습니다.');
+      return false;
+    }
+    
+    if (requestAmount <= 0) {
+      setAmountError('수거량은 0보다 커야 합니다.');
+      return false;
+    }
+    
+    if (requestAmount > selectedGroundData.remainingQuantity) {
+      setAmountError(`최대 수거 가능량은 ${selectedGroundData.remainingQuantity}L입니다.`);
+      return false;
+    }
+    
+    setAmountError(null);
+    return true;
+  };
 
   const handleFilterChange = (value: string) => {
     setFilterValue(value);
@@ -224,15 +409,50 @@ const MapComponent = () => {
     return filtered;
   };
 
-  const handleMarkerClick = (location: Location) => setSelectedLocation(location);
+  const handleMarkerClick = (location: Location) => {
+    console.log('마커 클릭됨:', location);
+    setSelectedLocation(location);
+  };
+  
   const closePopup = () => setSelectedLocation(null);
 
   const handleOpenPickupModal = (location: Location) => {
+    console.log('픽업 모달 열기:', location);
     setSelectedLocationForPickup(location);
+    setSelectedGround(null);
+    setRequestAmount(1);
+    setTimeError(null);
+    setAmountError(null);
+    
+    // 현재 시간을 기본값으로 설정 (영업 시간 내로)
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    
+    // 기본 시간이 영업 시간 내에 있도록 조정
+    if (location.openingTime && location.closingTime) {
+      if (currentTime < location.openingTime) {
+        setSelectedTime(location.openingTime);
+      } else if (currentTime > location.closingTime) {
+        // 오늘은 영업 시간이 지났으므로 내일 영업 시작 시간으로 설정하고 날짜를 하루 뒤로
+        setSelectedTime(location.openingTime);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setSelectedDate(tomorrow.toISOString().split('T')[0]);
+      } else {
+        setSelectedTime(currentTime);
+      }
+    } else {
+      setSelectedTime(currentTime);
+    }
+    
+    // 커피 찌꺼기 정보 가져오기
+    fetchCafeGrounds(location.id);
     setIsPickupModalOpen(true);
   };
 
-  const handleApplyForCollection = () => {
+  const handleApplyForCollection = async () => {
     if (!isAuthenticated) {
       toast({
         variant: 'destructive',
@@ -242,24 +462,63 @@ const MapComponent = () => {
       return;
     }
     
-    // 날짜 포맷팅
-    const dateObj = new Date(selectedDate);
-    const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+    // 픽업 시간 검증
+    const isTimeValid = validatePickupTime();
+    // 수거량 검증
+    const isAmountValid = validateAmount();
     
-    // 시간 포맷팅
-    const [hours, minutes] = selectedTime.split(':');
-    const hour = parseInt(hours);
-    const amPm = hour >= 12 ? '오후' : '오전';
-    const formattedHour = hour > 12 ? hour - 12 : hour;
-    const formattedTime = `${amPm} ${formattedHour}시${minutes !== '00' ? ` ${minutes}분` : ''}`;
+    if (!isTimeValid || !isAmountValid) {
+      return;
+    }
     
-    toast({ 
-      title: "신청 완료", 
-      description: `${formattedDate} ${formattedTime}에 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
-    });
+    if (!selectedGround) {
+      toast({
+        variant: 'destructive',
+        title: '커피 찌꺼기 선택 필요',
+        description: '수거할 커피 찌꺼기를 선택해주세요.',
+      });
+      return;
+    }
     
-    setIsPickupModalOpen(false);
-    setSelectedLocation(null);
+    try {
+      // 픽업 요청 데이터 생성
+      const pickupRequest: PickupRequest = {
+        groundId: selectedGround,
+        pickupDate: selectedDate,
+        pickupTime: selectedTime,
+        requestAmount: requestAmount
+      };
+      
+      // 수거 요청 API 호출
+      await axios.post(`/api/pickups/${selectedGround}`, pickupRequest);
+      
+      // 날짜 포맷팅
+      const dateObj = new Date(selectedDate);
+      const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
+      
+      // 시간 포맷팅
+      const [hours, minutes] = selectedTime.split(':');
+      const hour = parseInt(hours);
+      const amPm = hour >= 12 ? '오후' : '오전';
+      const formattedHour = hour > 12 ? hour - 12 : hour;
+      const formattedTime = `${amPm} ${formattedHour}시${minutes !== '00' ? ` ${minutes}분` : ''}`;
+      
+      // 성공 메시지
+      toast({ 
+        title: "신청 완료", 
+        description: `${formattedDate} ${formattedTime}에 ${requestAmount}L 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
+      });
+      
+      setIsPickupModalOpen(false);
+      setSelectedLocation(null);
+    } catch (error) {
+      console.error('수거 신청 오류:', error);
+      toast({
+        variant: 'destructive',
+        title: '신청 실패',
+        description: '수거 신청 중 오류가 발생했습니다. 다시 시도해주세요.',
+      });
+    }
   };
 
   const handleMyLocationClick = () => {
@@ -279,6 +538,8 @@ const MapComponent = () => {
       type: 'cafe', 
       address: '서울시 강남구 테헤란로 101', 
       hours: '매일 07:00 - 22:00', 
+      openingTime: '07:00',
+      closingTime: '22:00',
       available: true,
       lat: 37.508, 
       lng: 127.062,
@@ -290,12 +551,64 @@ const MapComponent = () => {
       type: 'cafe', 
       address: '서울시 강남구 선릉로 423', 
       hours: '매일 08:00 - 21:00', 
+      openingTime: '08:00',
+      closingTime: '21:00',
       available: true,
       lat: 37.504, 
       lng: 127.049,
       description: '에티오피아 예가체프 원두 사용'
     },
-    // 나머지 모의 데이터...
+    { 
+      id: 3, 
+      name: '투썸플레이스 역삼점', 
+      type: 'cafe', 
+      address: '서울시 강남구 역삼로 123', 
+      hours: '매일 08:00 - 23:00', 
+      openingTime: '08:00',
+      closingTime: '23:00',
+      available: true,
+      lat: 37.498, 
+      lng: 127.027,
+      description: '브라질 산토스 원두 사용, 일평균 3kg 배출'
+    },
+    { 
+      id: 4, 
+      name: 'BEAN 커피', 
+      type: 'cafe', 
+      address: '서울시 서초구 서초대로 333', 
+      hours: '매일 07:30 - 21:00', 
+      openingTime: '07:30',
+      closingTime: '21:00',
+      available: true,
+      lat: 37.491, 
+      lng: 127.031,
+      description: '다양한 종류의 원두 사용, 수거는 매주 월/수/금 가능'
+    }
+  ];
+
+  // 더미 커피 찌꺼기 데이터
+  const MOCK_GROUNDS: CoffeeGround[] = [
+    {
+      groundId: 101,
+      beanType: '에티오피아 예가체프',
+      quantity: 5.0,
+      remainingQuantity: 3.5,
+      registeredDate: '2025-05-05'
+    },
+    {
+      groundId: 102,
+      beanType: '콜롬비아 수프리모',
+      quantity: 3.0,
+      remainingQuantity: 2.0,
+      registeredDate: '2025-05-06'
+    },
+    {
+      groundId: 103,
+      beanType: '브라질 산토스',
+      quantity: 4.0,
+      remainingQuantity: 4.0,
+      registeredDate: '2025-05-07'
+    }
   ];
 
   return (
@@ -364,7 +677,7 @@ const MapComponent = () => {
         )}
       </div>
 
-      {/* 나머지 코드는 그대로 유지 */}
+      {/* 픽업 모달 */}
       <Dialog open={isPickupModalOpen} onOpenChange={setIsPickupModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -376,6 +689,75 @@ const MapComponent = () => {
           
           <div className="py-4">
             <div className="space-y-4">
+              {/* 커피 찌꺼기 선택 */}
+              <div className="space-y-2">
+                <Label htmlFor="ground-select">수거할 커피 찌꺼기</Label>
+                {isLoadingGrounds ? (
+                  <div className="text-sm text-muted-foreground">로딩 중...</div>
+                ) : (
+                  <Select
+                    value={selectedGround?.toString() || ""}
+                    onValueChange={(value) => {
+                      setSelectedGround(parseInt(value));
+                      // 선택한 찌꺼기의 남은 양으로 최대 수거량 설정
+                      const selected = cafeGrounds.find(g => g.groundId === parseInt(value));
+                      if (selected) {
+                        setMaxAmount(selected.remainingQuantity);
+                        setRequestAmount(Math.min(1, selected.remainingQuantity));
+                      }
+                      validateAmount();
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="수거할 커피 찌꺼기를 선택하세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cafeGrounds.length > 0 ? (
+                        cafeGrounds.map((ground) => (
+                          <SelectItem key={ground.groundId} value={ground.groundId.toString()}>
+                            {ground.beanType} ({ground.remainingQuantity}L 남음, {ground.registeredDate} 등록)
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          수거 가능한 커피 찌꺼기가 없습니다
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* 수거량 설정 */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="amount-slider">수거량 (L)</Label>
+                  <span className="text-sm font-medium">{requestAmount}L</span>
+                </div>
+                <Slider
+                  id="amount-slider"
+                  value={[requestAmount]}
+                  min={0.5}
+                  max={maxAmount}
+                  step={0.5}
+                  onValueChange={(values) => {
+                    setRequestAmount(values[0]);
+                    validateAmount();
+                  }}
+                  disabled={!selectedGround}
+                />
+                {amountError && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="text-xs">수거량 오류</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      {amountError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              {/* 픽업 날짜 */}
               <div className="space-y-2">
                 <Label htmlFor="pickup-date">픽업 날짜</Label>
                 <Input
@@ -388,16 +770,29 @@ const MapComponent = () => {
                 />
               </div>
 
+              {/* 픽업 시간 */}
               <div className="space-y-2">
                 <Label htmlFor="pickup-time">픽업 시간</Label>
                 <Input
                   id="pickup-time"
                   type="time"
                   value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedTime(e.target.value);
+                    validatePickupTime();
+                  }}
                   className="w-full"
                   step="3600"
                 />
+                {timeError && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="text-xs">시간 오류</AlertTitle>
+                    <AlertDescription className="text-xs">
+                      {timeError}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
               
               <div className="text-sm text-muted-foreground mt-2">
@@ -417,7 +812,7 @@ const MapComponent = () => {
             <Button 
               className="bg-coffee hover:bg-coffee-dark"
               onClick={handleApplyForCollection}
-              disabled={!selectedDate || !selectedTime}
+              disabled={!selectedDate || !selectedTime || !selectedGround || requestAmount <= 0 || !!timeError || !!amountError}
             >
               신청하기
             </Button>
