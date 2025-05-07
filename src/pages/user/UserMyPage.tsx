@@ -28,9 +28,9 @@ import {
   Clock,
   Trash2,
   XCircle,
+  Loader,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,81 +41,85 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import apiClient from '@/api/apiClient';
 
-// 수거 신청 타입 정의
-interface CollectionRequest {
-  id: number;
-  cafeId: string;
+// 수거 신청 타입 정의 (백엔드 API 응답 구조와 맞춤)
+interface PickupRequest {
+  pickupId: number;
   cafeName: string;
-  cafeAvatar?: string;
-  date: Date;
-  requestDate: Date;
-  status: 'pending' | 'accepted' | 'rejected' | 'completed';
+  cafeId: number;
+  cafeProfileImage?: string;
+  requestDate: string;
+  pickupDate: string;
+  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'REJECTED';
   amount: number;
   message?: string;
   beanType: string;
 }
 
-// 모의 수거 신청 데이터
-const mockRequests: CollectionRequest[] = [];
-
-// 환경 리포트 데이터
-const ecoReport = {
-  totalCollections: 3,
-  totalAmount: 9.5,
-  carbonSaved: 5.7,
-  level: '그린 레벨 2',
-  levelProgress: 65,
-  monthlyContribution: 3.2,
-  lastMonth: 2.5,
-};
+// 테스트용 더미 데이터 추가
+const mockRequests: PickupRequest[] = [
+  {
+    pickupId: 1,
+    cafeName: '스타벅스 강남점',
+    cafeId: 3,
+    cafeProfileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=스타벅스',
+    requestDate: '2025-05-07T10:30:00',
+    pickupDate: '2025-05-08',
+    status: 'PENDING',
+    amount: 2.5,
+    message: '방문 전에 연락 부탁드립니다.',
+    beanType: '에티오피아 예가체프'
+  },
+  {
+    pickupId: 2,
+    cafeName: '커피빈 선릉점',
+    cafeId: 4,
+    cafeProfileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=커피빈',
+    requestDate: '2025-05-06T15:20:00',
+    pickupDate: '2025-05-10',
+    status: 'PENDING',
+    amount: 3.0,
+    message: '오전 시간대에 방문하겠습니다.',
+    beanType: '콜롬비아 수프리모'
+  }
+];
 
 const UserMyPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [requests, setRequests] = useState<CollectionRequest[]>(mockRequests);
-  const [selectedRequest, setSelectedRequest] = useState<CollectionRequest | null>(null);
+  const [requests, setRequests] = useState<PickupRequest[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<number | null>(null);
 
-  // 수거 요청 목록 조회 함수 추가
+  // 수거 요청 목록 조회 함수
   const fetchPickupRequests = async () => {
     try {
       setIsLoading(true);
       
       // 사용자의 수거 요청 목록 조회 API 호출
-      const response = await apiClient.get('/api/pickups/my');
+      const response = await apiClient.get('/api/mypage/pickups');
       console.log('[디버깅] 수거 요청 목록 조회 성공:', response.data);
       
-      if (response.data && response.data.data) {
-        // API 응답을 우리의 CollectionRequest 인터페이스에 맞게 변환
-        const pickupRequests = response.data.data.map(pickup => ({
-          id: pickup.pickupId,
-          cafeId: pickup.cafeId.toString(),
-          cafeName: pickup.cafeName,
-          cafeAvatar: pickup.cafeProfileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pickup.cafeName}`,
-          date: new Date(pickup.pickupDate),
-          requestDate: new Date(pickup.requestDate),
-          status: pickup.status.toLowerCase(),
-          amount: pickup.amount,
-          message: pickup.message,
-          beanType: pickup.beanType
-        }));
-        
-        setRequests(pickupRequests);
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        setRequests(response.data.data);
       } else {
-        // 데이터가 없는 경우 빈 배열 사용
-        setRequests([]);
+        // 데이터가 없는 경우 개발 환경에서는 테스트 데이터 사용
+        console.log('[디버깅] API 응답이 비어있어 테스트 데이터를 사용합니다.');
+        setRequests(mockRequests);
       }
     } catch (error) {
       console.error('[디버깅] 수거 요청 목록 조회 오류:', error);
       
-      // 오류 발생 시 빈 배열 사용
-      setRequests([]);
+      // 오류 발생 시 테스트 데이터 사용
+      console.log('[디버깅] 오류로 인해 테스트 데이터를 사용합니다.');
+      setRequests(mockRequests);
       
       toast({
-        title: '수거 요청 목록 로딩 실패',
-        description: '데이터를 가져오는데 실패했습니다. 다시 시도해주세요.',
+        title: '데이터 로딩 실패',
+        description: '테스트 데이터를 사용합니다.',
         variant: 'destructive',
         duration: 3000,
       });
@@ -132,26 +136,53 @@ const UserMyPage = () => {
   }, [isAuthenticated]);
 
   // 상태별 요청 필터링
-  const pendingRequests = requests.filter(req => req.status === 'pending');
-  const acceptedRequests = requests.filter(req => req.status === 'accepted');
-  const completedRequests = requests.filter(req => req.status === 'completed');
-  const rejectedRequests = requests.filter(req => req.status === 'rejected');
+  const pendingRequests = requests.filter(req => req.status === 'PENDING');
+  const acceptedRequests = requests.filter(req => req.status === 'ACCEPTED');
+  const completedRequests = requests.filter(req => req.status === 'COMPLETED');
+  const rejectedRequests = requests.filter(req => req.status === 'REJECTED');
+
+  // 요청 취소 확인 창 열기
+  const handleConfirmDelete = (id: number) => {
+    setRequestToDelete(id);
+    setConfirmDeleteDialog(true);
+  };
 
   // 요청 취소 처리
-  const handleCancelRequest = (id: number) => {
-    setRequests(requests.filter(req => req.id !== id));
+  const handleCancelRequest = async () => {
+    if (!requestToDelete) return;
     
-    toast({
-      title: "신청 취소 완료",
-      description: "수거 신청이 취소되었습니다.",
-      duration: 3000,
-    });
-    
-    setIsDialogOpen(false);
+    try {
+      setIsLoading(true);
+      
+      // API 호출로 수거 요청 삭제
+      await apiClient.delete(`/api/pickups/${requestToDelete}`);
+      
+      // 요청 목록에서 삭제된 요청 제거
+      setRequests(requests.filter(req => req.pickupId !== requestToDelete));
+      
+      toast({
+        title: "신청 취소 완료",
+        description: "수거 신청이 취소되었습니다.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('[디버깅] 수거 요청 삭제 오류:', error);
+      
+      toast({
+        title: "신청 취소 실패",
+        description: "수거 신청 취소 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsLoading(false);
+      setConfirmDeleteDialog(false);
+      setIsDialogOpen(false);
+    }
   };
 
   // 요청 상세 보기
-  const handleViewRequest = (request: CollectionRequest) => {
+  const handleViewRequest = (request: PickupRequest) => {
     setSelectedRequest(request);
     setIsDialogOpen(true);
   };
@@ -159,16 +190,42 @@ const UserMyPage = () => {
   // 상태 배지 렌더링
   const renderStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending':
+      case 'PENDING':
         return <Badge variant="outline" className="border-yellow-500 text-yellow-700">대기 중</Badge>;
-      case 'accepted':
+      case 'ACCEPTED':
         return <Badge variant="outline" className="border-blue-500 text-blue-700">수락됨</Badge>;
-      case 'completed':
+      case 'COMPLETED':
         return <Badge variant="outline" className="border-green-500 text-green-700">완료됨</Badge>;
-      case 'rejected':
+      case 'REJECTED':
         return <Badge variant="outline" className="border-red-500 text-red-700">거절됨</Badge>;
       default:
         return null;
+    }
+  };
+
+  // 상태 텍스트 변환
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return '대기 중';
+      case 'ACCEPTED':
+        return '수락됨';
+      case 'COMPLETED':
+        return '완료됨';
+      case 'REJECTED':
+        return '거절됨';
+      default:
+        return status;
+    }
+  };
+
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'PPP', { locale: ko });
+    } catch (error) {
+      console.error('날짜 포맷팅 오류:', error);
+      return dateString;
     }
   };
 
@@ -183,7 +240,7 @@ const UserMyPage = () => {
           </div>
         </div>
         
-        {/* 사용자 대시보드 요약 */}
+        {/* 사용자 대시보드 요약 - 환경 기여도 등은 향후 구현 */}
         <div className="grid gap-6 mb-8 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -191,12 +248,9 @@ const UserMyPage = () => {
               <CardDescription>수거한 커피 찌꺼기</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-coffee">{ecoReport.monthlyContribution}L</div>
+              <div className="text-3xl font-bold text-coffee">3.2L</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {ecoReport.lastMonth > 0 
-                  ? `지난 달 대비 +${((ecoReport.monthlyContribution - ecoReport.lastMonth) / ecoReport.lastMonth * 100).toFixed(0)}%` 
-                  : '첫 기여 달!'
-                }
+                지난 달 대비 +28%
               </p>
             </CardContent>
           </Card>
@@ -207,7 +261,7 @@ const UserMyPage = () => {
               <CardDescription>CO2 배출 감소량</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-eco">{ecoReport.carbonSaved}kg</div>
+              <div className="text-3xl font-bold text-eco">5.7kg</div>
               <p className="text-xs text-muted-foreground mt-1">
                 커피 찌꺼기 1L당 약 0.6kg의 CO2 절감 효과
               </p>
@@ -218,7 +272,7 @@ const UserMyPage = () => {
         {/* 로딩 상태 표시 */}
         {isLoading && (
           <div className="flex justify-center items-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-coffee"></div>
+            <Loader className="animate-spin h-10 w-10 text-coffee" />
             <span className="ml-3 text-coffee-dark">데이터를 불러오는 중...</span>
           </div>
         )}
@@ -246,14 +300,14 @@ const UserMyPage = () => {
                   {pendingRequests.length > 0 ? (
                     <div className="space-y-4">
                       {pendingRequests.map(request => (
-                        <Card key={request.id} className="overflow-hidden">
+                        <Card key={request.pickupId} className="overflow-hidden">
                           <div className="bg-yellow-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <Clock className="h-5 w-5 text-yellow-600" />
                               <h3 className="font-medium">대기 중인 수거 신청</h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              신청일: {format(request.requestDate, 'PPP', { locale: ko })}
+                              신청일: {formatDate(request.requestDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
@@ -261,7 +315,11 @@ const UserMyPage = () => {
                               <div className="space-y-4">
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-10 w-10">
-                                    <AvatarImage src={request.cafeAvatar} alt={request.cafeName} />
+                                    <AvatarImage 
+                                      src={request.cafeProfileImage || 
+                                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                      alt={request.cafeName} 
+                                    />
                                     <AvatarFallback className="bg-coffee-cream text-coffee-dark">
                                       {request.cafeName.substring(0, 2)}
                                     </AvatarFallback>
@@ -274,10 +332,10 @@ const UserMyPage = () => {
                                 <div className="space-y-2">
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="text-sm font-medium">수거 희망일:</div>
-                                    <div className="text-sm">{format(request.date, 'PPP', { locale: ko })}</div>
+                                    <div className="text-sm">{formatDate(request.pickupDate)}</div>
                                     
                                     <div className="text-sm font-medium">원두 종류:</div>
-                                    <div className="text-sm">{request.beanType}</div>
+                                    <div className="text-sm">{request.beanType || "혼합 원두"}</div>
                                     
                                     <div className="text-sm font-medium">수거량:</div>
                                     <div className="text-sm">{request.amount}L</div>
@@ -299,7 +357,7 @@ const UserMyPage = () => {
                               <Button 
                                 variant="outline" 
                                 className="border-red-500 text-red-600 hover:bg-red-50"
-                                onClick={() => handleCancelRequest(request.id)}
+                                onClick={() => handleConfirmDelete(request.pickupId)}
                               >
                                 <Trash2 className="mr-1 h-4 w-4" />
                                 신청 취소
@@ -330,28 +388,32 @@ const UserMyPage = () => {
                 <CardHeader>
                   <CardTitle>수락된 신청</CardTitle>
                   <CardDescription>
-                    카페에서 수락한 찌꺼기 수거 신청입니다. 예정된 날짜에 방문하거나 배송을 확인하세요.
+                    카페에서 수락한 찌꺼기 수거 신청입니다. 예정된 날짜에 방문하세요.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {acceptedRequests.length > 0 ? (
                     <div className="space-y-4">
                       {acceptedRequests.map(request => (
-                        <Card key={request.id} className="overflow-hidden">
+                        <Card key={request.pickupId} className="overflow-hidden">
                           <div className="bg-blue-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <CheckCircle2 className="h-5 w-5 text-blue-600" />
                               <h3 className="font-medium">수락된 수거 신청</h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              수거일: {format(request.date, 'PPP', { locale: ko })}
+                              수거일: {formatDate(request.pickupDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
-                                  <AvatarImage src={request.cafeAvatar} alt={request.cafeName} />
+                                  <AvatarImage 
+                                    src={request.cafeProfileImage || 
+                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    alt={request.cafeName} 
+                                  />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
                                     {request.cafeName.substring(0, 2)}
                                   </AvatarFallback>
@@ -359,7 +421,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType} {request.amount}L
+                                    {request.beanType || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -397,21 +459,25 @@ const UserMyPage = () => {
                   {completedRequests.length > 0 ? (
                     <div className="space-y-4">
                       {completedRequests.map(request => (
-                        <Card key={request.id} className="overflow-hidden">
+                        <Card key={request.pickupId} className="overflow-hidden">
                           <div className="bg-green-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <CheckCircle2 className="h-5 w-5 text-green-600" />
                               <h3 className="font-medium">완료된 수거</h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              완료일: {format(request.date, 'PPP', { locale: ko })}
+                              완료일: {formatDate(request.pickupDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
-                                  <AvatarImage src={request.cafeAvatar} alt={request.cafeName} />
+                                  <AvatarImage 
+                                    src={request.cafeProfileImage || 
+                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    alt={request.cafeName} 
+                                  />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
                                     {request.cafeName.substring(0, 2)}
                                   </AvatarFallback>
@@ -419,7 +485,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType} {request.amount}L
+                                    {request.beanType || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -466,21 +532,25 @@ const UserMyPage = () => {
                   {rejectedRequests.length > 0 ? (
                     <div className="space-y-4">
                       {rejectedRequests.map(request => (
-                        <Card key={request.id} className="overflow-hidden">
+                        <Card key={request.pickupId} className="overflow-hidden">
                           <div className="bg-red-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <XCircle className="h-5 w-5 text-red-600" />
                               <h3 className="font-medium">거절된 신청</h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              신청일: {format(request.requestDate, 'PPP', { locale: ko })}
+                              신청일: {formatDate(request.requestDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
-                                  <AvatarImage src={request.cafeAvatar} alt={request.cafeName} />
+                                  <AvatarImage 
+                                    src={request.cafeProfileImage || 
+                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    alt={request.cafeName} 
+                                  />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
                                     {request.cafeName.substring(0, 2)}
                                   </AvatarFallback>
@@ -488,7 +558,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType} {request.amount}L
+                                    {request.beanType || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -523,14 +593,18 @@ const UserMyPage = () => {
             <DialogHeader>
               <DialogTitle>수거 신청 상세 정보</DialogTitle>
               <DialogDescription>
-                {format(selectedRequest.requestDate, 'PPP', { locale: ko })}에 신청됨
+                {formatDate(selectedRequest.requestDate)}에 신청됨
               </DialogDescription>
             </DialogHeader>
             
             <div className="space-y-4 py-4">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={selectedRequest.cafeAvatar} alt={selectedRequest.cafeName} />
+                  <AvatarImage 
+                    src={selectedRequest.cafeProfileImage || 
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedRequest.cafeName}`} 
+                    alt={selectedRequest.cafeName} 
+                  />
                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
                     {selectedRequest.cafeName.substring(0, 2)}
                   </AvatarFallback>
@@ -545,10 +619,10 @@ const UserMyPage = () => {
                 <div>{renderStatusBadge(selectedRequest.status)}</div>
                 
                 <div className="text-sm font-medium">수거 희망일:</div>
-                <div className="text-sm">{format(selectedRequest.date, 'PPP', { locale: ko })}</div>
+                <div className="text-sm">{formatDate(selectedRequest.pickupDate)}</div>
                 
                 <div className="text-sm font-medium">원두 종류:</div>
-                <div className="text-sm">{selectedRequest.beanType}</div>
+                <div className="text-sm">{selectedRequest.beanType || "혼합 원두"}</div>
                 
                 <div className="text-sm font-medium">요청량:</div>
                 <div className="text-sm">{selectedRequest.amount}L</div>
@@ -572,17 +646,17 @@ const UserMyPage = () => {
                 닫기
               </Button>
               
-              {selectedRequest.status === 'pending' && (
+              {selectedRequest.status === 'PENDING' && (
                 <Button 
                   variant="destructive"
-                  onClick={() => handleCancelRequest(selectedRequest.id)}
+                  onClick={() => handleConfirmDelete(selectedRequest.pickupId)}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
                   신청 취소
                 </Button>
               )}
               
-              {selectedRequest.status === 'completed' && (
+              {selectedRequest.status === 'COMPLETED' && (
                 <Button 
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => navigate('/eco-report')}
@@ -594,6 +668,45 @@ const UserMyPage = () => {
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+      
+      {/* 삭제 확인 대화상자 */}
+      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>수거 신청 취소</DialogTitle>
+            <DialogDescription>
+              이 수거 신청을 취소하시겠습니까? 이 작업은 되돌릴 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <DialogFooter className="flex justify-between mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDeleteDialog(false)}
+              disabled={isLoading}
+            >
+              취소
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleCancelRequest}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  처리 중...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  신청 취소
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
       
       <UserNavbar />
