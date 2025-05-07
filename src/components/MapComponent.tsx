@@ -14,10 +14,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Camera, Search } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import apiClient from '@/api/apiClient';
 
 interface Location {
   id: number;
@@ -42,51 +44,6 @@ interface CoffeeGround {
   registeredDate: string;
 }
 
-// 픽업 요청 인터페이스
-interface PickupRequest {
-  groundId: number;
-  pickupDate: string;
-  pickupTime: string;
-  requestAmount: number;
-}
-
-// 백엔드 API 응답 타입 정의
-interface CafeResponse {
-  cafeId: number;
-  memberId: number;
-  name: string;
-  address: string;
-  detailAddress: string;
-  latitude: number;
-  longitude: number;
-  phone: string;
-  collectSchedule: string;
-  openHours: string;
-  description: string;
-}
-
-interface ApiResponseData {
-  content: CafeResponse[];
-  totalElements: number;
-  totalPages: number;
-}
-
-interface ApiResponse {
-  status: number;
-  code: string;
-  message: string;
-  data: ApiResponseData;
-  timestamp: string;
-}
-
-// 커피 찌꺼기 API 응답 타입
-interface GroundsResponse {
-  status: number;
-  code: string;
-  message: string;
-  data: CoffeeGround[];
-}
-
 const MapComponent = () => {
   const [filterValue, setFilterValue] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -109,6 +66,7 @@ const MapComponent = () => {
   const [isPickupModalOpen, setIsPickupModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedTime, setSelectedTime] = useState('');
+  const [message, setMessage] = useState(''); // 메시지 입력을 위한 상태 추가
   const [selectedLocationForPickup, setSelectedLocationForPickup] = useState<Location | null>(null);
   const [selectedGround, setSelectedGround] = useState<number | null>(null);
   const [requestAmount, setRequestAmount] = useState<number>(1);
@@ -122,7 +80,7 @@ const MapComponent = () => {
   const fetchCafes = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get<ApiResponse>('/api/cafes');
+      const response = await axios.get('/api/cafes');
       
       // 응답 객체 구조 검증
       if (response.data && response.data.data && response.data.data.content) {
@@ -184,7 +142,7 @@ const MapComponent = () => {
     setIsLoadingGrounds(true);
     try {
       // API 호출 - 실제 엔드포인트로 수정 필요
-      const response = await axios.get<GroundsResponse>(`/api/cafes/${cafeId}/grounds`);
+      const response = await axios.get(`/api/cafes/${cafeId}/grounds`);
       
       if (response.data && response.data.data) {
         setCafeGrounds(response.data.data);
@@ -421,6 +379,7 @@ const MapComponent = () => {
     setSelectedLocationForPickup(location);
     setSelectedGround(null);
     setRequestAmount(1);
+    setMessage(''); // 메시지 필드 초기화
     setTimeError(null);
     setAmountError(null);
     
@@ -452,6 +411,7 @@ const MapComponent = () => {
     setIsPickupModalOpen(true);
   };
 
+  // 수정된 수거 신청 함수
   const handleApplyForCollection = async () => {
     if (!isAuthenticated) {
       toast({
@@ -482,31 +442,27 @@ const MapComponent = () => {
     
     try {
       // 픽업 요청 데이터 생성
-      const pickupRequest: PickupRequest = {
-        groundId: selectedGround,
-        pickupDate: selectedDate,
-        pickupTime: selectedTime,
-        requestAmount: requestAmount
+      const pickupRequest = {
+        amount: requestAmount,
+        message: message || '',
+        pickupDate: selectedDate
       };
       
+      console.log(`[디버깅] 수거 요청 데이터:`, pickupRequest);
+      
       // 수거 요청 API 호출
-      await axios.post(`/api/pickups/${selectedGround}`, pickupRequest);
+      const response = await apiClient.post(`/api/pickups/${selectedGround}`, pickupRequest);
+      
+      console.log(`[디버깅] 수거 요청 성공:`, response.data);
       
       // 날짜 포맷팅
       const dateObj = new Date(selectedDate);
       const formattedDate = `${dateObj.getFullYear()}년 ${dateObj.getMonth() + 1}월 ${dateObj.getDate()}일`;
       
-      // 시간 포맷팅
-      const [hours, minutes] = selectedTime.split(':');
-      const hour = parseInt(hours);
-      const amPm = hour >= 12 ? '오후' : '오전';
-      const formattedHour = hour > 12 ? hour - 12 : hour;
-      const formattedTime = `${amPm} ${formattedHour}시${minutes !== '00' ? ` ${minutes}분` : ''}`;
-      
       // 성공 메시지
       toast({ 
         title: "신청 완료", 
-        description: `${formattedDate} ${formattedTime}에 ${requestAmount}L 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
+        description: `${formattedDate}에 ${requestAmount}L 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
       });
       
       setIsPickupModalOpen(false);
@@ -677,7 +633,7 @@ const MapComponent = () => {
         )}
       </div>
 
-      {/* 픽업 모달 */}
+      {/* 픽업 모달 - 수정된 부분 */}
       <Dialog open={isPickupModalOpen} onOpenChange={setIsPickupModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -793,6 +749,19 @@ const MapComponent = () => {
                     </AlertDescription>
                   </Alert>
                 )}
+              </div>
+              
+              {/* 메시지 필드 - 새로 추가 */}
+              <div className="space-y-2">
+                <Label htmlFor="message">메시지 (선택사항)</Label>
+                <Textarea
+                  id="message"
+                  placeholder="카페 사장님에게 전달할 메시지나 요청사항을 입력해주세요."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="resize-none"
+                  rows={3}
+                />
               </div>
               
               <div className="text-sm text-muted-foreground mt-2">
