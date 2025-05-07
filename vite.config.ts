@@ -12,13 +12,13 @@ export default defineConfig({
   },
   server: {
     port: 8080,
-    proxy: {
-      "/api": {
-        target: "http://34.64.59.141:8080",
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path,
-      },
-    },
+    // proxy: {
+    //   "/api": {
+    //     target: "http://34.64.59.141:8080",
+    //     changeOrigin: true,
+    //     secure: false,
+    //     rewrite: (path) => path,
+    //   },
+    // },
   },
 });

@@ -36,7 +36,8 @@ const LoginPage = () => {
       console.log("[디버깅] Google 로그인 시도 시작");
 
       // 백엔드 엔드포인트와 일치하도록 수정
-      window.location.href = "/api/auth/login/google";
+      window.location.href = "http://34.64.59.141:8080/api/auth/login/google";
+      //apiClient;
     } catch (error: any) {
       console.error("[디버깅] Google 로그인 초기화 오류:", error);
 
@@ -84,13 +85,10 @@ const LoginPage = () => {
       const startTime = new Date().getTime();
 
       // 상대 경로 사용 (프록시 적용)
-      const response = await apiClient.post(
-        "http://34.64.59.141:8080/api/auth/login",
-        {
-          username: username.trim(),
-          password: password,
-        }
-      );
+      const response = await apiClient.post("/api/auth/login", {
+        username: username.trim(),
+        password: password,
+      });
 
       // 요청 완료 후 타임스탬프
       const endTime = new Date().getTime();

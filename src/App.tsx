@@ -89,7 +89,10 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/oauth/google/callback" element={<GoogleOAuthCallback />} />
+      <Route
+        path="/api/auth/google/callback"
+        element={<GoogleOAuthCallback />}
+      />
 
       {/* 카페 등록 페이지 */}
       <Route
