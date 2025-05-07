@@ -375,6 +375,7 @@ const MapComponent = () => {
         requestTime: selectedTime
       };
       
+      
       console.log(`[디버깅] 수거 요청 데이터:`, pickupRequest);
       
       // 성공 알림 (실제 API 연동 전 테스트용)

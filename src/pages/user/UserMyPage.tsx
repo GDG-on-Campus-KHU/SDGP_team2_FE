@@ -29,10 +29,11 @@ import {
   Trash2,
   XCircle,
   Loader,
+  RefreshCcw, // 새로고침 아이콘 추가
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // useLocation 추가
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -41,7 +42,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import apiClient from '@/api/apiClient';
 
-// 수거 신청 타입 정의 (백엔드 API 응답 구조와 맞춤)
+// 수거 신청 타입 정의
 interface PickupRequest {
   pickupId: number;
   cafeName: string;
@@ -55,37 +56,17 @@ interface PickupRequest {
   beanType: string;
 }
 
-// 테스트용 더미 데이터 추가
-const mockRequests: PickupRequest[] = [
-  {
-    pickupId: 1,
-    cafeName: '스타벅스 강남점',
-    cafeId: 3,
-    cafeProfileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=스타벅스',
-    requestDate: '2025-05-07T10:30:00',
-    pickupDate: '2025-05-08',
-    status: 'PENDING',
-    amount: 2.5,
-    message: '방문 전에 연락 부탁드립니다.',
-    beanType: '에티오피아 예가체프'
-  },
-  {
-    pickupId: 2,
-    cafeName: '커피빈 선릉점',
-    cafeId: 4,
-    cafeProfileImage: 'https://api.dicebear.com/7.x/avataaars/svg?seed=커피빈',
-    requestDate: '2025-05-06T15:20:00',
-    pickupDate: '2025-05-10',
-    status: 'PENDING',
-    amount: 3.0,
-    message: '오전 시간대에 방문하겠습니다.',
-    beanType: '콜롬비아 수프리모'
-  }
-];
+// 환경 기여도 인터페이스 추가
+interface EnvReportData {
+  totalCollected: number;
+  carbonSaved: string;
+  reportCount: number;
+}
 
 const UserMyPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation(); // 위치 정보 추가
   const { user, isAuthenticated } = useAuth();
   const [requests, setRequests] = useState<PickupRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(null);
@@ -93,33 +74,68 @@ const UserMyPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<number | null>(null);
+  // 환경 기여도 상태 추가
+  const [envReport, setEnvReport] = useState<EnvReportData>({
+    totalCollected: 0,
+    carbonSaved: '0',
+    reportCount: 0
+  });
+
+  // 환경 기여도 조회 함수
+  const fetchEnvironmentalReport = async () => {
+    try {
+      console.log('[디버깅] 환경 기여도 조회 시작...');
+      
+      const response = await apiClient.get('/api/members/me/report');
+      console.log('[디버깅] 환경 기여도 조회 성공:', response.data);
+      
+      if (response.data && response.data.data) {
+        setEnvReport(response.data.data);
+      } else {
+        console.log('[디버깅] API 응답 형식이 예상과 다릅니다.');
+      }
+    } catch (error) {
+      console.error('[디버깅] 환경 기여도 조회 오류:', error);
+      
+      // 오류 상세 정보 출력
+      if (error.response) {
+        console.error('응답 데이터:', error.response.data);
+        console.error('응답 상태:', error.response.status);
+      }
+    }
+  };
 
   // 수거 요청 목록 조회 함수
   const fetchPickupRequests = async () => {
     try {
       setIsLoading(true);
       
-      // 사용자의 수거 요청 목록 조회 API 호출
+      console.log('[디버깅] 수거 요청 목록 조회 시작...');
+      
       const response = await apiClient.get('/api/mypage/pickups');
       console.log('[디버깅] 수거 요청 목록 조회 성공:', response.data);
       
-      if (response.data && response.data.data && response.data.data.length > 0) {
+      if (response.data && response.data.data) {
+        // 실제 데이터만 사용하고 테스트 데이터는 사용하지 않음
         setRequests(response.data.data);
+        
+        // 데이터가 비어있는 경우 빈 배열 표시
+        if (response.data.data.length === 0) {
+          console.log('[디버깅] API 응답이 비어있습니다.');
+          setRequests([]);
+        }
       } else {
-        // 데이터가 없는 경우 개발 환경에서는 테스트 데이터 사용
-        console.log('[디버깅] API 응답이 비어있어 테스트 데이터를 사용합니다.');
-        setRequests(mockRequests);
+        console.log('[디버깅] API 응답 형식이 예상과 다릅니다.');
+        setRequests([]);
       }
     } catch (error) {
       console.error('[디버깅] 수거 요청 목록 조회 오류:', error);
-      
-      // 오류 발생 시 테스트 데이터 사용
-      console.log('[디버깅] 오류로 인해 테스트 데이터를 사용합니다.');
-      setRequests(mockRequests);
+      // 실패해도 테스트 데이터 사용하지 않고 빈 배열 표시
+      setRequests([]);
       
       toast({
         title: '데이터 로딩 실패',
-        description: '테스트 데이터를 사용합니다.',
+        description: '수거 요청 목록을 가져오는데 실패했습니다.',
         variant: 'destructive',
         duration: 3000,
       });
@@ -128,12 +144,25 @@ const UserMyPage = () => {
     }
   };
 
-  // 컴포넌트 로드 시 수거 요청 목록 조회
+  // 컴포넌트 로드 시 수거 요청 목록과 환경 기여도 조회
   useEffect(() => {
     if (isAuthenticated) {
       fetchPickupRequests();
+      fetchEnvironmentalReport();
     }
   }, [isAuthenticated]);
+  
+  // 다른 페이지에서 새로고침 플래그와 함께 넘어온 경우 데이터 새로고침
+  useEffect(() => {
+    if (location.state?.refresh && isAuthenticated) {
+      console.log('[디버깅] 새로고침 플래그 감지, 데이터 새로고침 시작');
+      fetchPickupRequests();
+      fetchEnvironmentalReport();
+      
+      // state 초기화 (이전 state 값 제거)
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.state, isAuthenticated, navigate, location.pathname]);
 
   // 상태별 요청 필터링
   const pendingRequests = requests.filter(req => req.status === 'PENDING');
@@ -151,11 +180,29 @@ const UserMyPage = () => {
   const handleCancelRequest = async () => {
     if (!requestToDelete) return;
     
+    // 현재 사용자 ID와 요청 사용자 ID 비교
+    const requestToCancel = requests.find(req => req.pickupId === requestToDelete);
+    
+    if (!requestToCancel) {
+      toast({
+        title: "요청 찾기 실패",
+        description: "취소할 수거 요청을 찾을 수 없습니다.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      setConfirmDeleteDialog(false);
+      return;
+    }
+    
     try {
       setIsLoading(true);
       
+      console.log(`[디버깅] 수거 요청 삭제 시작: ID=${requestToDelete}`);
+      
       // API 호출로 수거 요청 삭제
       await apiClient.delete(`/api/pickups/${requestToDelete}`);
+      
+      console.log(`[디버깅] 수거 요청 삭제 성공: ID=${requestToDelete}`);
       
       // 요청 목록에서 삭제된 요청 제거
       setRequests(requests.filter(req => req.pickupId !== requestToDelete));
@@ -165,8 +212,21 @@ const UserMyPage = () => {
         description: "수거 신청이 취소되었습니다.",
         duration: 3000,
       });
+      
+      // 모달 닫기
+      setConfirmDeleteDialog(false);
+      setIsDialogOpen(false);
+      
+      // 환경 기여도 갱신
+      fetchEnvironmentalReport();
     } catch (error) {
       console.error('[디버깅] 수거 요청 삭제 오류:', error);
+      
+      // 오류 상세 정보 출력
+      if (error.response) {
+        console.error('응답 데이터:', error.response.data);
+        console.error('응답 상태:', error.response.status);
+      }
       
       toast({
         title: "신청 취소 실패",
@@ -176,8 +236,6 @@ const UserMyPage = () => {
       });
     } finally {
       setIsLoading(false);
-      setConfirmDeleteDialog(false);
-      setIsDialogOpen(false);
     }
   };
 
@@ -229,6 +287,19 @@ const UserMyPage = () => {
     }
   };
 
+  // API 재조회 함수
+  const refreshData = () => {
+    console.log('[디버깅] 수동 새로고침 시작');
+    fetchPickupRequests();
+    fetchEnvironmentalReport();
+    
+    toast({
+      title: "새로고침 중",
+      description: "최신 수거 신청 정보를 불러오고 있습니다.",
+      duration: 2000,
+    });
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
@@ -238,9 +309,20 @@ const UserMyPage = () => {
             <h1 className="text-3xl font-bold text-coffee-dark">마이페이지</h1>
             <p className="text-muted-foreground">나의 수거 내역 및 환경 기여도를 확인해보세요.</p>
           </div>
+          
+          {/* 새로고침 버튼 추가 */}
+          <Button 
+            variant="outline" 
+            onClick={refreshData}
+            className="border-coffee text-coffee hover:bg-coffee-cream/50"
+            disabled={isLoading}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            새로고침
+          </Button>
         </div>
         
-        {/* 사용자 대시보드 요약 - 환경 기여도 등은 향후 구현 */}
+        {/* 사용자 대시보드 요약 - API에서 받은 환경 기여도 정보 표시 */}
         <div className="grid gap-6 mb-8 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
@@ -248,7 +330,7 @@ const UserMyPage = () => {
               <CardDescription>수거한 커피 찌꺼기</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-coffee">3.2L</div>
+              <div className="text-3xl font-bold text-coffee">{envReport.totalCollected}L</div>
               <p className="text-xs text-muted-foreground mt-1">
                 지난 달 대비 +28%
               </p>
@@ -261,9 +343,23 @@ const UserMyPage = () => {
               <CardDescription>CO2 배출 감소량</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-eco">5.7kg</div>
+              <div className="text-3xl font-bold text-eco">{envReport.carbonSaved}kg</div>
               <p className="text-xs text-muted-foreground mt-1">
                 커피 찌꺼기 1L당 약 0.6kg의 CO2 절감 효과
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-medium">완료된 수거</CardTitle>
+              <CardDescription>성공적으로
+                수거 완료한 횟수</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-coffee-dark">{envReport.reportCount}회</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                꾸준한 활동으로 환경을 보호해요
               </p>
             </CardContent>
           </Card>

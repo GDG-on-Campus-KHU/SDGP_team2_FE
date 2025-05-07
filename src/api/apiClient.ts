@@ -285,7 +285,7 @@ export const updateProfileImage = async (userId: string, imageData: string) => {
   }
 };
 
-// 수거 요청 생성 API
+// 수거 요청 생성 API - 수정
 export const createPickupRequest = async (
   groundId: number,
   requestData: {
@@ -297,7 +297,7 @@ export const createPickupRequest = async (
   console.log("[디버깅] 수거 요청 생성:", { groundId, ...requestData });
 
   try {
-    // 실제 API가 준비되었을 때 사용할 코드
+    // API 엔드포인트 수정
     return await apiClient.post(`/api/pickups/${groundId}`, requestData);
   } catch (error) {
     console.error("[디버깅] 수거 요청 생성 오류:", error);
@@ -319,12 +319,12 @@ export const getUserPickups = async (status?: string) => {
   }
 };
 
-// 수거 요청 삭제 API
+// 수거 요청 삭제 API - 수정
 export const deletePickup = async (pickupId: number) => {
   console.log("[디버깅] 수거 요청 삭제:", { pickupId });
 
   try {
-    // 실제 API가 준비되었을 때 사용할 코드
+    // API 엔드포인트 확인
     return await apiClient.delete(`/api/pickups/${pickupId}`);
   } catch (error) {
     console.error("[디버깅] 수거 요청 삭제 오류:", error);
