@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader } from 'lucide-react';
+import apiClient, { processGoogleAuthCode } from '@/api/apiClient';
+
+// API 기본 URL 정의
+const API_BASE_URL = 'http://34.64.59.141:8080';
 
 const GoogleOAuthCallback = () => {
   const location = useLocation();
@@ -16,12 +20,62 @@ const GoogleOAuthCallback = () => {
     const processOAuthCallback = async () => {
       console.log('\n[디버깅] ===== Google OAuth 콜백 처리 시작 =====');
       console.log('[디버깅] 시간:', new Date().toISOString());
+      console.log('[디버깅] 현재 URL 경로:', location.pathname);
+      console.log('[디버깅] 쿼리 파라미터:', location.search);
       
       // URL에서 토큰 정보 추출
       const urlParams = new URLSearchParams(location.search);
       const accessToken = urlParams.get('accessToken');
       const refreshToken = urlParams.get('refreshToken');
       const username = urlParams.get('username');
+      const code = urlParams.get('code'); // 구글에서 반환하는 인증 코드
+      
+      // 인증 코드가 있지만 토큰이 없는 경우 - 백엔드에 토큰 교환 요청 필요
+      if (code && (!accessToken || !refreshToken)) {
+        console.log('[디버깅] 인증 코드 감지, 토큰 교환 시도', code.substring(0, 10) + '...');
+        
+        try {
+          // 백엔드에 코드 전송하여 토큰 받기
+          const response = await processGoogleAuthCode(code);
+          
+          if (response.data && response.data.data) {
+            const tokenData = response.data.data;
+            
+            // 토큰 저장
+            localStorage.setItem('accessToken', tokenData.accessToken);
+            localStorage.setItem('refreshToken', tokenData.refreshToken);
+            
+            // 사용자 정보로 로그인 처리
+            login({
+              id: tokenData.userId || "google-user",
+              name: tokenData.username || "구글 사용자",
+              email: tokenData.email || '',
+              userType: tokenData.role === "CAFE" ? "cafe" : "user",
+              avatar: tokenData.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${tokenData.username}`
+            });
+            
+            toast({
+              title: "구글 로그인 성공",
+              description: "구글 계정으로 로그인되었습니다.",
+              duration: 3000,
+            });
+            
+            if (tokenData.role === "CAFE") {
+              navigate('/cafe/dashboard');
+            } else {
+              navigate('/');
+            }
+            return;
+          } else {
+            throw new Error("토큰 데이터가 올바르지 않습니다.");
+          }
+        } catch (error: any) {
+          console.error('[디버깅] 토큰 교환 실패:', error);
+          setError(`구글 인증 처리 중 오류: ${error.message}`);
+          setIsProcessing(false);
+          return;
+        }
+      }
       
       if (!accessToken || !refreshToken) {
         setError('인증 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
@@ -38,7 +92,6 @@ const GoogleOAuthCallback = () => {
         localStorage.setItem('refreshToken', refreshToken);
         
         // 사용자 정보 결정 - 실제 역할(role) 정보가 URL에 포함되어 있지 않으므로 기본값 사용
-        // 실제 환경에서는 백엔드에서 역할 정보도 함께 전달하거나, 토큰으로 사용자 정보를 조회하는 추가 API 호출 필요
         const userType = 'user'; // 기본값으로 일반 사용자 설정
         
         // 사용자 정보 설정 및 로그인 처리

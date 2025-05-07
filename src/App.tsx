@@ -25,6 +25,7 @@ import GoogleOAuthCallback from "./pages/auth/GoogleOAuthCallback";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import CafeRegistrationPage from "./pages/cafe/CafeRegistrationPage";
 import { useEffect } from "react";
+
 // 인증이 필요한 라우트를 보호하는 컴포넌트
 const ProtectedRoute = ({
   children,
@@ -89,10 +90,12 @@ const AppRoutes = () => {
       <Route path="/" element={<Index />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route
-        path="/api/auth/google/callback"
-        element={<GoogleOAuthCallback />}
-      />
+      
+      {/* 구글 OAuth 콜백 경로 - 여러 가능한 경로 모두 처리 */}
+      <Route path="/oauth/google/callback" element={<GoogleOAuthCallback />} />
+      <Route path="/api/auth/google/callback" element={<GoogleOAuthCallback />} />
+      <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
+      <Route path="/google/callback" element={<GoogleOAuthCallback />} />
 
       {/* 카페 등록 페이지 */}
       <Route

@@ -25,6 +25,7 @@ import Footer from "@/components/Footer";
 import axios from "axios";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Upload, Camera, X } from "lucide-react";
+import apiClient from "@/api/apiClient";
 
 // 프로필 이미지 업로드 컴포넌트
 const ProfileImageUpload = ({ username, profileImage, onChange }) => {
@@ -284,9 +285,8 @@ const RegisterPage = () => {
 
       const startTime = new Date().getTime();
 
-      const response = await axios.post(
-        "http://34.64.59.141:8080/api/auth/register",
-        registerData
+      const response = await apiClient.post(
+        "api/auth/register", registerData,
       );
 
       const endTime = new Date().getTime();

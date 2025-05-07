@@ -1,14 +1,10 @@
-// apiClient.ts 수정본 - 프로필 이미지 업로드 지원 추가
-
 import axios, {
   AxiosInstance,
   InternalAxiosRequestConfig,
   AxiosResponse,
 } from "axios";
 
-// 프록시 사용을 위해 기본 URL을 비워둡니다
-// 개발 환경: 빈 문자열 사용
-// 프로덕션 환경: 실제 API URL 사용 (배포 시 수정 필요)
+// 프록시 대신 직접 서버 URL 사용
 const API_BASE_URL = "http://34.64.59.141:8080";
 
 // API 클라이언트 설정
@@ -54,8 +50,8 @@ const refreshAccessToken = async (): Promise<string> => {
   try {
     console.log("[디버깅] 토큰 갱신 시도...");
 
-    // 상대 경로 사용 (프록시 적용)
-    const response = await axios.post("/api/auth/refresh", {
+    // 전체 URL 경로 사용 (프록시 대신)
+    const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
       refreshToken,
     });
 
@@ -237,6 +233,23 @@ export const googleLogin = async (authCode: string) => {
   }
 };
 
+// 구글 OAuth 콜백 코드 처리 함수 추가
+export const processGoogleAuthCode = async (code: string) => {
+  console.log("[디버깅] 구글 인증 코드 처리:", {
+    code: code.substring(0, 10) + "...",
+  });
+
+  try {
+    return await apiClient.post("/api/auth/google/token", {
+      code: code,
+      redirectUri: window.location.origin + "/oauth/google/callback",
+    });
+  } catch (error) {
+    console.error("[디버깅] 구글 인증 코드 처리 실패:", error);
+    throw error;
+  }
+};
+
 // 로그아웃
 export const logout = async () => {
   console.log("[디버깅] 로그아웃 처리");
@@ -285,27 +298,7 @@ export const createPickupRequest = async (
 
   try {
     // 실제 API가 준비되었을 때 사용할 코드
-    // return await apiClient.post(`/api/pickups/${groundId}`, requestData);
-
-    // 모킹 - 실제 API가 준비되지 않은 환경에서 테스트
-    return {
-      data: {
-        success: true,
-        code: "PICKUP_CREATE_SUCCESS",
-        message: "수거 요청이 성공적으로 생성되었습니다.",
-        data: {
-          pickupId: Date.now(),
-          memberId: 1, // 현재 로그인한 사용자 ID
-          groundId: groundId,
-          amount: requestData.amount,
-          message: requestData.message,
-          pickupDate: requestData.pickupDate,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: "PENDING",
-        },
-      },
-    };
+    return await apiClient.post(`/api/pickups/${groundId}`, requestData);
   } catch (error) {
     console.error("[디버깅] 수거 요청 생성 오류:", error);
     throw error;
@@ -318,63 +311,8 @@ export const getUserPickups = async (status?: string) => {
 
   try {
     // 실제 API가 준비되었을 때 사용할 코드
-    // const url = status ? `/api/mypage/pickups?status=${status}` : '/api/mypage/pickups';
-    // return await apiClient.get(url);
-
-    // 모킹 - 실제 API가 준비되지 않은 환경에서 테스트
-    // 현재 MapComponent에 있는 MOCK_LOCATIONS을 활용
-    const mockLocations = [
-      {
-        id: 1,
-        cafeName: "스타벅스 강남점",
-        requestDate: new Date("2023-11-29"),
-        pickupDate: new Date("2023-12-05"),
-        beanName: "에티오피아 예가체프",
-        amount: 3.5,
-        status: status || "PENDING",
-      },
-      {
-        id: 2,
-        cafeName: "커피빈 선릉점",
-        requestDate: new Date("2023-11-27"),
-        pickupDate: new Date("2023-12-04"),
-        beanName: "콜롬비아 수프리모",
-        amount: 2.0,
-        status: "ACCEPTED",
-      },
-      {
-        id: 3,
-        cafeName: "블루보틀 삼청점",
-        requestDate: new Date("2023-11-25"),
-        pickupDate: new Date("2023-12-03"),
-        beanName: "브라질 산토스",
-        amount: 4.0,
-        status: "COMPLETED",
-      },
-      {
-        id: 4,
-        cafeName: "이디야 서초점",
-        requestDate: new Date("2023-11-20"),
-        pickupDate: new Date("2023-11-25"),
-        beanName: "에티오피아 예가체프",
-        amount: 5.0,
-        status: "REJECTED",
-      },
-    ];
-
-    // 상태 필터링
-    const filteredPickups = status
-      ? mockLocations.filter((p) => p.status === status)
-      : mockLocations;
-
-    return {
-      data: {
-        success: true,
-        code: "PICKUP_GET_LIST_SUCCESS",
-        message: "수거 요청 목록을 성공적으로 조회했습니다.",
-        data: filteredPickups,
-      },
-    };
+    const url = status ? `/api/mypage/pickups?status=${status}` : '/api/mypage/pickups';
+    return await apiClient.get(url);
   } catch (error) {
     console.error("[디버깅] 수거 요청 목록 조회 오류:", error);
     throw error;
@@ -387,16 +325,7 @@ export const deletePickup = async (pickupId: number) => {
 
   try {
     // 실제 API가 준비되었을 때 사용할 코드
-    // return await apiClient.delete(`/api/pickups/${pickupId}`);
-
-    // 모킹 - 실제 API가 준비되지 않은 환경에서 테스트
-    return {
-      data: {
-        success: true,
-        code: "PICKUP_DELETE_SUCCESS",
-        message: "수거 요청이 성공적으로 삭제되었습니다.",
-      },
-    };
+    return await apiClient.delete(`/api/pickups/${pickupId}`);
   } catch (error) {
     console.error("[디버깅] 수거 요청 삭제 오류:", error);
     throw error;
@@ -409,16 +338,7 @@ export const updatePickupStatus = async (pickupId: number, status: string) => {
 
   try {
     // 실제 API가 준비되었을 때 사용할 코드
-    // return await apiClient.put(`/api/pickups/${pickupId}/status`, { status });
-
-    // 모킹 - 실제 API가 준비되지 않은 환경에서 테스트
-    return {
-      data: {
-        success: true,
-        code: "PICKUP_STATUS_UPDATE_SUCCESS",
-        message: "수거 요청 상태가 성공적으로 수정되었습니다.",
-      },
-    };
+    return await apiClient.put(`/api/pickups/${pickupId}/status`, { status });
   } catch (error) {
     console.error("[디버깅] 수거 요청 상태 업데이트 오류:", error);
     throw error;

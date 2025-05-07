@@ -16,11 +16,10 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import axios from "axios";
 import apiClient from "@/api/apiClient";
 
-// 프록시 사용을 위해 기본 URL 제거
-// const API_BASE_URL = 'http://35.216.4.12:8080';
+// API 기본 URL 정의
+const API_BASE_URL = "http://34.64.59.141:8080";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -35,9 +34,14 @@ const LoginPage = () => {
     try {
       console.log("[디버깅] Google 로그인 시도 시작");
 
-      // 백엔드 엔드포인트와 일치하도록 수정
-      window.location.href = "http://34.64.59.141:8080/api/auth/login/google";
-      //apiClient;
+      // 리다이렉트 URL을 명시적으로 지정 (우리 앱의 콜백 경로로)
+      const redirectUri = `${window.location.origin}/oauth/google/callback`;
+      
+      // URL 파라미터에 리다이렉트 URI 추가
+      const authUrl = `${API_BASE_URL}/api/auth/login/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      
+      console.log("[디버깅] 구글 로그인 URL:", authUrl);
+      window.location.href = authUrl;
     } catch (error: any) {
       console.error("[디버깅] Google 로그인 초기화 오류:", error);
 
@@ -84,7 +88,7 @@ const LoginPage = () => {
       // 요청 시작 전 타임스탬프
       const startTime = new Date().getTime();
 
-      // 상대 경로 사용 (프록시 적용)
+      // apiClient 사용
       const response = await apiClient.post("/api/auth/login", {
         username: username.trim(),
         password: password,

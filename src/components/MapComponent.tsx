@@ -20,6 +20,11 @@ import { Slider } from '@/components/ui/slider';
 import { AlertCircle, Camera, Search } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import apiClient from '@/api/apiClient';
+// 마커 이미지 import
+import coffeeMarkerIcon from '@/assets/coffee_marker.png';
+
+// API 서버 기본 URL
+const API_BASE_URL = "http://34.64.59.141:8080";
 
 interface Location {
   id: number;
@@ -80,7 +85,8 @@ const MapComponent = () => {
   const fetchCafes = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get('/api/cafes');
+      // 프록시 대신 전체 URL 사용
+      const response = await axios.get(`${API_BASE_URL}/api/cafes`);
       
       // 응답 객체 구조 검증
       if (response.data && response.data.data && response.data.data.content) {
@@ -141,8 +147,8 @@ const MapComponent = () => {
   const fetchCafeGrounds = async (cafeId: number) => {
     setIsLoadingGrounds(true);
     try {
-      // API 호출 - 실제 엔드포인트로 수정 필요
-      const response = await axios.get(`/api/cafes/${cafeId}/grounds`);
+      // API 호출 - 전체 URL 사용
+      const response = await axios.get(`${API_BASE_URL}/api/cafes/${cafeId}/grounds`);
       
       if (response.data && response.data.data) {
         setCafeGrounds(response.data.data);
@@ -186,13 +192,13 @@ const MapComponent = () => {
         // 유효한 좌표 확인
         if (isNaN(loc.lat) || isNaN(loc.lng)) return;
         
-        // 마커 생성
+        // 마커 생성 - import한 이미지 사용
         const marker = new google.maps.Marker({
           map: mapRef.current,
           title: loc.name,
           position: { lat: loc.lat, lng: loc.lng },
           icon: {
-            url: 'src/assets/coffee_marker.png',
+            url: coffeeMarkerIcon,
             scaledSize: new google.maps.Size(32, 32)
           }
         });
@@ -450,8 +456,17 @@ const MapComponent = () => {
       
       console.log(`[디버깅] 수거 요청 데이터:`, pickupRequest);
       
-      // 수거 요청 API 호출
-      const response = await apiClient.post(`/api/pickups/${selectedGround}`, pickupRequest);
+      // 수거 요청 API 호출 - 전체 URL 사용
+      const response = await axios.post(
+        `${API_BASE_URL}/api/pickups/${selectedGround}`, 
+        pickupRequest,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       
       console.log(`[디버깅] 수거 요청 성공:`, response.data);
       
