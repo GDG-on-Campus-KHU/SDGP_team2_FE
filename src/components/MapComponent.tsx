@@ -18,8 +18,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { AlertCircle, Search } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useNavigate } from 'react-router-dom';
 // 마커 이미지 import
 import coffeeMarkerIcon from '@/assets/coffee_marker.png';
+// API 클라이언트 추가
+import apiClient from '@/api/apiClient';
 
 // API 서버 기본 URL
 const API_BASE_URL = "http://34.64.59.141:8080";
@@ -48,6 +51,7 @@ const MapComponent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate(); // useNavigate 훅 추가
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
@@ -337,7 +341,7 @@ const MapComponent = () => {
     setIsPickupModalOpen(true);
   };
 
-  // 수정된 수거 신청 함수 - 직접 수거 요청만 가능하도록 단순화
+  // 수정된 수거 신청 함수
   const handleApplyForCollection = async () => {
     if (!isAuthenticated) {
       toast({
@@ -366,23 +370,32 @@ const MapComponent = () => {
     }
     
     try {
+      setIsLoading(true);
+      
+      // 날짜 및 시간 포맷 (예: 2023-05-08)
+      const pickupDate = selectedDate;
+      
       // 픽업 요청 데이터 생성
       const pickupRequest = {
-        cafeId: selectedLocationForPickup.id,  // 카페 ID
         amount: requestAmount,
         message: message || '',
-        pickupDate: selectedDate,
-        requestTime: selectedTime
+        pickupDate: pickupDate
       };
-      
       
       console.log(`[디버깅] 수거 요청 데이터:`, pickupRequest);
       
-      // 성공 알림 (실제 API 연동 전 테스트용)
+      // API 호출로 수거 요청 생성
+      const response = await apiClient.post(`/api/pickups/${selectedLocationForPickup.id}`, pickupRequest);
+      
+      console.log(`[디버깅] 수거 요청 응답:`, response);
+      
       toast({ 
         title: "요청 성공", 
         description: `${selectedLocationForPickup.name}에 ${requestAmount}L 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.` 
       });
+      
+      // 마이페이지로 이동 - refresh 플래그와 함께
+      navigate('/mypage', { state: { refresh: true } });
       
       setIsPickupModalOpen(false);
       setSelectedLocation(null);
@@ -393,6 +406,8 @@ const MapComponent = () => {
         title: '신청 실패',
         description: '수거 신청 중 오류가 발생했습니다. 다시 시도해주세요.',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

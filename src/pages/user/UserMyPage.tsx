@@ -20,8 +20,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
   BarChart3,
   CheckCircle2,
@@ -29,11 +34,12 @@ import {
   Trash2,
   XCircle,
   Loader,
-  RefreshCcw, // 새로고침 아이콘 추가
+  RefreshCcw,
+  Plus,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useNavigate, useLocation } from 'react-router-dom'; // useLocation 추가
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -42,31 +48,53 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import apiClient from '@/api/apiClient';
 
-// 수거 신청 타입 정의
+// 수거 신청 타입 정의 - 정확한 API 응답 구조에 맞게 수정
 interface PickupRequest {
   pickupId: number;
   cafeName: string;
-  cafeId: number;
-  cafeProfileImage?: string;
-  requestDate: string;
   pickupDate: string;
-  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'REJECTED';
+  requestDate: string;
+  beanName: string;
   amount: number;
+  status: 'PENDING' | 'ACCEPTED' | 'COMPLETED' | 'REJECTED';
   message?: string;
-  beanType: string;
 }
 
-// 환경 기여도 인터페이스 추가
+// 환경 기여도 인터페이스
 interface EnvReportData {
   totalCollected: number;
   carbonSaved: string;
   reportCount: number;
 }
 
+// 수거 요청 생성 인터페이스 - 정확한 API 요청 구조에 맞게 정의
+interface PickupRequestData {
+  amount: number;
+  message?: string;
+  pickupDate: string;
+}
+
+// 카페 정보 인터페이스
+interface Cafe {
+  cafeId: number;
+  name: string;
+  address: string;
+  openHours: string;
+}
+
+// 커피 찌꺼기 정보 인터페이스
+interface CoffeeGround {
+  groundId: number;
+  beanName: string;
+  remainingAmount: number;
+  cafeId: number;
+  cafeName: string;
+}
+
 const UserMyPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const location = useLocation(); // 위치 정보 추가
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [requests, setRequests] = useState<PickupRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(null);
@@ -74,12 +102,26 @@ const UserMyPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<number | null>(null);
-  // 환경 기여도 상태 추가
+  
+  // 환경 기여도 상태
   const [envReport, setEnvReport] = useState<EnvReportData>({
     totalCollected: 0,
     carbonSaved: '0',
     reportCount: 0
   });
+
+  // 새로운 수거 요청 관련 상태 추가
+  const [newRequestDialog, setNewRequestDialog] = useState(false);
+  const [availableCafes, setAvailableCafes] = useState<Cafe[]>([]);
+  const [availableGrounds, setAvailableGrounds] = useState<CoffeeGround[]>([]);
+  const [selectedCafe, setSelectedCafe] = useState<number | null>(null);
+  const [selectedGround, setSelectedGround] = useState<number | null>(null);
+  const [pickupAmount, setPickupAmount] = useState<number>(1);
+  const [pickupDate, setPickupDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  const [pickupMessage, setPickupMessage] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 환경 기여도 조회 함수
   const fetchEnvironmentalReport = async () => {
@@ -112,14 +154,14 @@ const UserMyPage = () => {
       
       console.log('[디버깅] 수거 요청 목록 조회 시작...');
       
+      // API에 맞게 정확한 엔드포인트를 사용
       const response = await apiClient.get('/api/mypage/pickups');
       console.log('[디버깅] 수거 요청 목록 조회 성공:', response.data);
       
       if (response.data && response.data.data) {
-        // 실제 데이터만 사용하고 테스트 데이터는 사용하지 않음
+        // API 응답 구조에 맞게 데이터 설정
         setRequests(response.data.data);
         
-        // 데이터가 비어있는 경우 빈 배열 표시
         if (response.data.data.length === 0) {
           console.log('[디버깅] API 응답이 비어있습니다.');
           setRequests([]);
@@ -130,7 +172,6 @@ const UserMyPage = () => {
       }
     } catch (error) {
       console.error('[디버깅] 수거 요청 목록 조회 오류:', error);
-      // 실패해도 테스트 데이터 사용하지 않고 빈 배열 표시
       setRequests([]);
       
       toast({
@@ -141,6 +182,64 @@ const UserMyPage = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 카페 목록 조회 함수 (새로 추가)
+  const fetchAvailableCafes = async () => {
+    try {
+      console.log('[디버깅] 카페 목록 조회 시작...');
+      
+      const response = await apiClient.get('/api/cafes');
+      console.log('[디버깅] 카페 목록 조회 성공:', response.data);
+      
+      if (response.data && response.data.data && Array.isArray(response.data.data.content)) {
+        setAvailableCafes(response.data.data.content);
+      } else {
+        console.log('[디버깅] API 응답 형식이 예상과 다릅니다.');
+        // 임시 데이터로 테스트
+        setAvailableCafes([
+          { cafeId: 1, name: '에코빈 카페', address: '서울시 강남구', openHours: '09:00-22:00' },
+          { cafeId: 2, name: '그린 커피', address: '서울시 서초구', openHours: '08:00-20:00' },
+        ]);
+      }
+    } catch (error) {
+      console.error('[디버깅] 카페 목록 조회 오류:', error);
+      
+      // 임시 데이터로 테스트
+      setAvailableCafes([
+        { cafeId: 1, name: '에코빈 카페', address: '서울시 강남구', openHours: '09:00-22:00' },
+        { cafeId: 2, name: '그린 커피', address: '서울시 서초구', openHours: '08:00-20:00' },
+      ]);
+    }
+  };
+
+  // 커피 찌꺼기 목록 조회 함수 (새로 추가)
+  const fetchAvailableGrounds = async (cafeId: number) => {
+    try {
+      console.log(`[디버깅] 커피 찌꺼기 목록 조회 시작 (카페 ID: ${cafeId})...`);
+      
+      const response = await apiClient.get(`/api/cafes/${cafeId}/grounds`);
+      console.log('[디버깅] 커피 찌꺼기 목록 조회 성공:', response.data);
+      
+      if (response.data && response.data.data) {
+        setAvailableGrounds(response.data.data);
+      } else {
+        console.log('[디버깅] API 응답 형식이 예상과 다릅니다.');
+        // 임시 데이터로 테스트
+        setAvailableGrounds([
+          { groundId: 1, beanName: '에티오피아 예가체프', remainingAmount: 5, cafeId, cafeName: '에코빈 카페' },
+          { groundId: 2, beanName: '콜롬비아 수프리모', remainingAmount: 3, cafeId, cafeName: '에코빈 카페' },
+        ]);
+      }
+    } catch (error) {
+      console.error('[디버깅] 커피 찌꺼기 목록 조회 오류:', error);
+      
+      // 임시 데이터로 테스트
+      setAvailableGrounds([
+        { groundId: 1, beanName: '에티오피아 예가체프', remainingAmount: 5, cafeId, cafeName: '에코빈 카페' },
+        { groundId: 2, beanName: '콜롬비아 수프리모', remainingAmount: 3, cafeId, cafeName: '에코빈 카페' },
+      ]);
     }
   };
 
@@ -180,26 +279,12 @@ const UserMyPage = () => {
   const handleCancelRequest = async () => {
     if (!requestToDelete) return;
     
-    // 현재 사용자 ID와 요청 사용자 ID 비교
-    const requestToCancel = requests.find(req => req.pickupId === requestToDelete);
-    
-    if (!requestToCancel) {
-      toast({
-        title: "요청 찾기 실패",
-        description: "취소할 수거 요청을 찾을 수 없습니다.",
-        variant: "destructive",
-        duration: 3000,
-      });
-      setConfirmDeleteDialog(false);
-      return;
-    }
-    
     try {
       setIsLoading(true);
       
       console.log(`[디버깅] 수거 요청 삭제 시작: ID=${requestToDelete}`);
       
-      // API 호출로 수거 요청 삭제
+      // 정확한 API 엔드포인트 사용 - DELETE 메서드로 /api/pickups/{pickupId}
       await apiClient.delete(`/api/pickups/${requestToDelete}`);
       
       console.log(`[디버깅] 수거 요청 삭제 성공: ID=${requestToDelete}`);
@@ -236,6 +321,86 @@ const UserMyPage = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 새 수거 요청 대화상자 열기 처리 (새로 추가)
+  const handleOpenNewRequestDialog = () => {
+    fetchAvailableCafes();
+    setNewRequestDialog(true);
+    setSelectedCafe(null);
+    setSelectedGround(null);
+    setPickupAmount(1);
+    setPickupDate(new Date().toISOString().split('T')[0]);
+    setPickupMessage('');
+  };
+
+  // 카페 선택 처리 (새로 추가)
+  const handleCafeSelect = (cafeId: number) => {
+    setSelectedCafe(cafeId);
+    fetchAvailableGrounds(cafeId);
+  };
+
+  // 수거 요청 제출 처리 (새로 추가)
+  const handleSubmitPickupRequest = async () => {
+    if (!selectedGround) {
+      toast({
+        title: "선택 오류",
+        description: "수거할 커피 찌꺼기를 선택해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // API 요청 데이터 구성
+      const requestData: PickupRequestData = {
+        amount: pickupAmount,
+        message: pickupMessage.trim() || undefined,
+        pickupDate: pickupDate,
+      };
+      
+      console.log('[디버깅] 수거 요청 생성 시작...');
+      console.log('[디버깅] 요청 데이터:', requestData);
+      
+      // API 호출
+      const response = await apiClient.post(`/api/pickups/${selectedGround}`, requestData);
+      
+      console.log('[디버깅] 수거 요청 생성 성공:', response.data);
+      
+      if (response.data && response.data.data) {
+        // 성공 알림
+        toast({
+          title: "수거 신청 완료",
+          description: "커피 찌꺼기 수거 신청이 완료되었습니다.",
+          duration: 3000,
+        });
+        
+        // 대화상자 닫기
+        setNewRequestDialog(false);
+        
+        // 최신 데이터로 목록 갱신
+        fetchPickupRequests();
+      }
+    } catch (error) {
+      console.error('[디버깅] 수거 요청 생성 오류:', error);
+      
+      if (error.response) {
+        console.error('응답 데이터:', error.response.data);
+        console.error('응답 상태:', error.response.status);
+      }
+      
+      toast({
+        title: "수거 신청 실패",
+        description: "수거 신청 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -310,16 +475,27 @@ const UserMyPage = () => {
             <p className="text-muted-foreground">나의 수거 내역 및 환경 기여도를 확인해보세요.</p>
           </div>
           
-          {/* 새로고침 버튼 추가 */}
-          <Button 
-            variant="outline" 
-            onClick={refreshData}
-            className="border-coffee text-coffee hover:bg-coffee-cream/50"
-            disabled={isLoading}
-          >
-            <RefreshCcw className="mr-2 h-4 w-4" />
-            새로고침
-          </Button>
+          <div className="flex gap-2">
+            {/* 새 수거 요청 버튼 추가 */}
+            <Button 
+              className="bg-coffee hover:bg-coffee-dark"
+              onClick={handleOpenNewRequestDialog}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              새 수거 신청
+            </Button>
+            
+            {/* 새로고침 버튼 */}
+            <Button 
+              variant="outline" 
+              onClick={refreshData}
+              className="border-coffee text-coffee hover:bg-coffee-cream/50"
+              disabled={isLoading}
+            >
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              새로고침
+            </Button>
+          </div>
         </div>
         
         {/* 사용자 대시보드 요약 - API에서 받은 환경 기여도 정보 표시 */}
@@ -412,8 +588,7 @@ const UserMyPage = () => {
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-10 w-10">
                                     <AvatarImage 
-                                      src={request.cafeProfileImage || 
-                                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
                                       alt={request.cafeName} 
                                     />
                                     <AvatarFallback className="bg-coffee-cream text-coffee-dark">
@@ -431,7 +606,7 @@ const UserMyPage = () => {
                                     <div className="text-sm">{formatDate(request.pickupDate)}</div>
                                     
                                     <div className="text-sm font-medium">원두 종류:</div>
-                                    <div className="text-sm">{request.beanType || "혼합 원두"}</div>
+                                    <div className="text-sm">{request.beanName || "혼합 원두"}</div>
                                     
                                     <div className="text-sm font-medium">수거량:</div>
                                     <div className="text-sm">{request.amount}L</div>
@@ -472,6 +647,13 @@ const UserMyPage = () => {
                   ) : (
                     <div className="text-center py-10 text-muted-foreground">
                       <p>대기 중인 수거 신청이 없습니다.</p>
+                      <Button 
+                        className="mt-4 bg-coffee hover:bg-coffee-dark"
+                        onClick={handleOpenNewRequestDialog}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        새 수거 신청하기
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -506,8 +688,7 @@ const UserMyPage = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage 
-                                    src={request.cafeProfileImage || 
-                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
                                     alt={request.cafeName} 
                                   />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
@@ -517,7 +698,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType || "혼합 원두"} {request.amount}L
+                                    {request.beanName || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -570,8 +751,7 @@ const UserMyPage = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage 
-                                    src={request.cafeProfileImage || 
-                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
                                     alt={request.cafeName} 
                                   />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
@@ -581,7 +761,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType || "혼합 원두"} {request.amount}L
+                                    {request.beanName || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -643,8 +823,7 @@ const UserMyPage = () => {
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10">
                                   <AvatarImage 
-                                    src={request.cafeProfileImage || 
-                                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`} 
                                     alt={request.cafeName} 
                                   />
                                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
@@ -654,7 +833,7 @@ const UserMyPage = () => {
                                 <div>
                                   <div className="font-medium">{request.cafeName}</div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanType || "혼합 원두"} {request.amount}L
+                                    {request.beanName || "혼합 원두"} {request.amount}L
                                   </div>
                                 </div>
                               </div>
@@ -697,8 +876,7 @@ const UserMyPage = () => {
               <div className="flex items-center space-x-3">
                 <Avatar className="h-12 w-12">
                   <AvatarImage 
-                    src={selectedRequest.cafeProfileImage || 
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedRequest.cafeName}`} 
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedRequest.cafeName}`} 
                     alt={selectedRequest.cafeName} 
                   />
                   <AvatarFallback className="bg-coffee-cream text-coffee-dark">
@@ -718,7 +896,7 @@ const UserMyPage = () => {
                 <div className="text-sm">{formatDate(selectedRequest.pickupDate)}</div>
                 
                 <div className="text-sm font-medium">원두 종류:</div>
-                <div className="text-sm">{selectedRequest.beanType || "혼합 원두"}</div>
+                <div className="text-sm">{selectedRequest.beanName || "혼합 원두"}</div>
                 
                 <div className="text-sm font-medium">요청량:</div>
                 <div className="text-sm">{selectedRequest.amount}L</div>
@@ -764,6 +942,137 @@ const UserMyPage = () => {
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+      
+      {/* 새 수거 요청 대화상자 */}
+      <Dialog open={newRequestDialog} onOpenChange={setNewRequestDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>새 수거 신청</DialogTitle>
+            <DialogDescription>
+              카페에서 배출된 커피 찌꺼기 수거를 신청합니다.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* 카페 선택 */}
+            <div>
+              <Label className="font-medium mb-2 block">카페 선택</Label>
+              <div className="grid gap-3 md:grid-cols-2">
+                {availableCafes.map(cafe => (
+                  <Card 
+                    key={cafe.cafeId} 
+                    className={`cursor-pointer transition-all ${
+                      selectedCafe === cafe.cafeId 
+                        ? 'border-coffee ring-2 ring-coffee ring-opacity-50'
+                        : 'hover:border-coffee hover:border-opacity-50'
+                    }`}
+                    onClick={() => handleCafeSelect(cafe.cafeId)}
+                  >
+                    <CardContent className="p-4">
+                      <h4 className="font-medium text-coffee-dark">{cafe.name}</h4>
+                      <p className="text-xs text-muted-foreground mt-1">{cafe.address}</p>
+                      <p className="text-xs text-muted-foreground mt-1">영업시간: {cafe.openHours}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            
+            {/* 커피 찌꺼기 선택 */}
+            {selectedCafe && (
+              <div>
+                <Label className="font-medium mb-2 block">수거할 커피 찌꺼기 선택</Label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {availableGrounds.map(ground => (
+                    <Card 
+                      key={ground.groundId} 
+                      className={`cursor-pointer transition-all ${
+                        selectedGround === ground.groundId 
+                          ? 'border-coffee ring-2 ring-coffee ring-opacity-50'
+                          : 'hover:border-coffee hover:border-opacity-50'
+                      }`}
+                      onClick={() => setSelectedGround(ground.groundId)}
+                    >
+                      <CardContent className="p-4">
+                        <h4 className="font-medium text-coffee-dark">{ground.beanName}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">남은 양: {ground.remainingAmount}L</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* 수거량 설정 */}
+            {selectedGround && (
+              <>
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <Label className="font-medium">수거량 (L)</Label>
+                    <span className="text-sm font-medium">{pickupAmount}L</span>
+                  </div>
+                  <Slider
+                    value={[pickupAmount]}
+                    min={0.5}
+                    max={5}
+                    step={0.5}
+                    onValueChange={(values) => setPickupAmount(values[0])}
+                  />
+                </div>
+                
+                {/* 수거 날짜 선택 */}
+                <div>
+                  <Label className="font-medium mb-2 block">수거 희망일</Label>
+                  <Input
+                    type="date"
+                    value={pickupDate}
+                    onChange={(e) => setPickupDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                
+                {/* 메시지 입력 (선택사항) */}
+                <div>
+                  <Label className="font-medium mb-2 block">메시지 (선택사항)</Label>
+                  <Textarea
+                    placeholder="카페 사장님에게 전달할 메시지나 요청사항을 입력해주세요."
+                    value={pickupMessage}
+                    onChange={(e) => setPickupMessage(e.target.value)}
+                    className="resize-none"
+                    rows={3}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNewRequestDialog(false)}
+              disabled={isSubmitting}
+            >
+              취소
+            </Button>
+            <Button 
+              className="bg-coffee hover:bg-coffee-dark"
+              onClick={handleSubmitPickupRequest}
+              disabled={!selectedGround || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" />
+                  처리 중...
+                </>
+              ) : (
+                <>
+                  신청하기
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
       
       {/* 삭제 확인 대화상자 */}
