@@ -151,33 +151,13 @@ const CafeRequestsPage = () => {
           response.data.data.length > 0
         ) {
           setRequests(response.data.data);
-        } else {
-          // API 응답이 없는 경우 더미 데이터 사용
-          console.warn(
-            "[디버깅] API 응답에 데이터가 없습니다. 더미 데이터를 사용합니다."
-          );
-          setRequests(dummyRequests);
-
-          toast({
-            title: "데이터 로딩 알림",
-            description: "더미 데이터를 사용합니다.",
-            duration: 3000,
-          });
         }
       } catch (error: unknown) {
         console.error("[디버깅] 수거 요청 조회 중 예상치 못한 오류:", error);
 
-        // API가 실패한 경우 더미 데이터 사용
-        setRequests(dummyRequests);
-
-        const errorMessage =
-          "수거 요청을 가져오는 중 오류가 발생했습니다. 더미 데이터를 사용합니다.";
-
-        setError(errorMessage);
-
         toast({
           title: "데이터 로딩 실패",
-          description: errorMessage,
+          description: "데이터 로딩 실패",
           variant: "destructive",
           duration: 3000,
         });
