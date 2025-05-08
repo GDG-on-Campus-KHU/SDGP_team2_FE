@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/AWS-S3-orange?style=for-the-badge&logo=amazonaws"/>
 </p>
 
-<h1 align="center">☕ CoffeeReturn (커피 리턴)</h1>
+<h1 align="center">☕ ECO-BEAN (에코빈)</h1>
 <h3 align="center">지구를 위한 커피 한 잔,<br>원두 찌꺼기의 순환을 위한 친환경 지도 기반 플랫폼</h3>
 
 <br/>
