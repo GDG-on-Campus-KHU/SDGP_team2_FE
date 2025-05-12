@@ -10,6 +10,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "dist", // Firebase Hosting에 배포할 빌드 출력 폴더
+  },
   server: {
     port: 8080,
     // proxy: {

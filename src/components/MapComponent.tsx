@@ -42,6 +42,7 @@ interface Location {
 }
 
 const MapComponent = () => {
+  console.log("CI/CD 테스트용 콘솔");
   const [filterValue, setFilterValue] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
