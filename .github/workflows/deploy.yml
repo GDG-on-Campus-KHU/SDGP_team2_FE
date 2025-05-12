@@ -24,6 +24,9 @@ jobs:
       - name: Build Vite app
         run: npm run build
 
+      - name: Set GOOGLE_MAPS_API_KEY environment variable
+        run: echo "VITE_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -32,3 +35,4 @@ jobs:
           channelId: live
           expires: 7d
           firebaseToolsVersion: latest
+
