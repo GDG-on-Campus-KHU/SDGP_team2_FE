@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -7,272 +6,568 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Leaf, ExternalLink, Coffee, Sparkles, Bot, Filter } from 'lucide-react';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import UserNavbar from '@/components/UserNavbar';
-import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  ExternalLink,
+  Coffee,
+  Sparkles,
+  Bot,
+  Leaf,
+  Loader,
+  Recycle,
+  Send,
+} from "lucide-react";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import UserNavbar from "@/components/UserNavbar";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import apiClient from "@/api/apiClient";
 
 // AI 추천 결과 타입
 interface AiRecommendation {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  image: string;
   tags: string[];
-  difficulty: 'easy' | 'medium' | 'hard';
-  time: string;
-  link?: string;
+  difficulty: string;
+  duration: string;
   materials: string[];
   steps: string[];
 }
 
+// 채팅 메시지 타입
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: Date;
+  solution?: AiRecommendation;
+  options?: ChatOption[];
+  additionalSolutions?: AiRecommendation[];
+}
+
+// 채팅 옵션 타입
+interface ChatOption {
+  id: string;
+  text: string;
+  purpose?: string;
+  beanType?: string;
+  action?:
+    | "purpose"
+    | "beanType"
+    | "generate"
+    | "restart"
+    | "view-alt-solution"
+    | "none";
+  solutionIndex?: number;
+}
+
 // 활용 목적 유형
 const purposeOptions = [
-  { value: 'all', label: '전체' },
-  { value: 'scrub', label: '스크럽/각질제거' },
-  { value: 'fertilizer', label: '비료/퇴비' },
-  { value: 'fragrance', label: '방향제' },
-  { value: 'craft', label: '공예품' },
-  { value: 'soap', label: '비누/화장품' },
+  { value: "scrub", label: "스크럽/각질제거" },
+  { value: "fertilizer", label: "비료/퇴비" },
+  { value: "fragrance", label: "방향제" },
+  { value: "craft", label: "공예품" },
+  { value: "soap", label: "비누/화장품" },
 ];
 
-// 모의 AI 추천 데이터
-const mockRecommendations: AiRecommendation[] = [
-  {
-    id: '1',
-    title: '커피 스크럽 비누',
-    description: '커피 찌꺼기를 재활용하여 각질 제거와 피부 탄력에 좋은 스크럽 비누를 만들어보세요.',
-    image: 'https://picsum.photos/seed/coffee-soap/400/300',
-    tags: ['스크럽', '비누', '각질제거'],
-    difficulty: 'easy',
-    time: '30분',
-    link: 'https://example.com/coffee-soap',
-    materials: [
-      '커피 찌꺼기 1/2컵 (말린 것)',
-      '글리세린 비누 베이스 200g',
-      '에센셜 오일 10방울 (선택사항)',
-      '올리브 오일 1큰술'
-    ],
-    steps: [
-      '커피 찌꺼기를 완전히 말려주세요.',
-      '비누 베이스를 전자레인지나 중탕으로 녹여주세요.',
-      '녹인 비누 베이스에 말린 커피 찌꺼기를 넣고 잘 섞어주세요.',
-      '에센셜 오일과 올리브 오일을 넣고 섞어주세요.',
-      '비누 몰드에 부어 1-2시간 굳혀주세요.',
-      '완전히 굳으면 몰드에서 꺼내 사용하세요.'
-    ]
-  },
-  {
-    id: '2',
-    title: '커피 방향제 만들기',
-    description: '자연스러운 커피향으로 집안에 은은한 향기를 더해보세요. 탈취 효과도 뛰어납니다.',
-    image: 'https://picsum.photos/seed/coffee-fragrance/400/300',
-    tags: ['방향제', '탈취', '인테리어'],
-    difficulty: 'easy',
-    time: '15분',
-    link: 'https://example.com/coffee-fragrance',
-    materials: [
-      '말린 커피 찌꺼기 1컵',
-      '베이킹 소다 1/2컵',
-      '작은 유리병',
-      '장식용 리본 (선택사항)'
-    ],
-    steps: [
-      '커피 찌꺼기를 완전히 말려 습기를 제거합니다.',
-      '말린 커피 찌꺼기와 베이킹 소다를 잘 섞습니다.',
-      '혼합물을 작은 유리병에 담습니다.',
-      '작은 구멍이 있는 뚜껑을 닫거나, 천으로 덮고 리본으로 묶어줍니다.',
-      '냉장고, 신발장, 옷장 등 냄새 제거가 필요한 곳에 놓아둡니다.',
-      '2-3주마다 커피 찌꺼기를 새것으로 교체해줍니다.'
-    ]
-  },
-  {
-    id: '3',
-    title: '커피 찌꺼기 화분 퇴비',
-    description: '질소, 인, 칼륨이 풍부한 커피 찌꺼기로 식물 성장에 도움이 되는 퇴비를 만들어보세요.',
-    image: 'https://picsum.photos/seed/coffee-fertilizer/400/300',
-    tags: ['퇴비', '비료', '가드닝'],
-    difficulty: 'medium',
-    time: '1주일',
-    link: 'https://example.com/coffee-fertilizer',
-    materials: [
-      '커피 찌꺼기 2컵',
-      '말린 낙엽 또는 신문지 조각 2컵',
-      '달걀 껍데기 (선택사항)',
-      '설탕 1큰술'
-    ],
-    steps: [
-      '커피 찌꺼기가 완전히 말랐는지 확인합니다.',
-      '커피 찌꺼기와 말린 낙엽을 1:1 비율로 섞습니다.',
-      '원한다면 곱게 갈은 달걀 껍데기를 추가합니다.',
-      '섞은 재료에 설탕물을 약간 뿌려 미생물 활동을 촉진합니다.',
-      '그늘진 곳에서 1주일간 발효시킵니다.',
-      '실내 화분이나 정원의 흙에 5:1 비율로 섞어 사용합니다.'
-    ]
-  },
-  {
-    id: '4',
-    title: '커피 찌꺼기 캔들',
-    description: '커피 찌꺼기로 만든 천연 캔들로 실내 공기를 정화하고 은은한 커피향을 즐겨보세요.',
-    image: 'https://picsum.photos/seed/coffee-candle/400/300',
-    tags: ['캔들', '인테리어', '공예'],
-    difficulty: 'medium',
-    time: '1시간',
-    link: 'https://example.com/coffee-candle',
-    materials: [
-      '말린 커피 찌꺼기 1/4컵',
-      '소이 왁스 200g',
-      '심지',
-      '유리 용기',
-      '에센셜 오일 (선택사항)'
-    ],
-    steps: [
-      '커피 찌꺼기를 완전히 말려 준비합니다.',
-      '유리 용기 중앙에 심지를 고정합니다.',
-      '소이 왁스를 중탕으로 녹입니다.',
-      '녹인 왁스의 온도가 약 70도일 때 말린 커피 찌꺼기를 넣고 섞어줍니다.',
-      '원하는 경우 에센셜 오일을 몇 방울 떨어뜨립니다.',
-      '혼합물을 유리 용기에 부어 완전히 굳을 때까지 기다립니다.',
-      '왁스가 굳으면 심지를 적당한 길이로 잘라 사용합니다.'
-    ]
-  },
-  {
-    id: '5',
-    title: '커피 각질 제거 스크럽',
-    description: '얼굴과 바디를 위한 자연스러운 스크럽으로 매끄러운 피부를 가꿔보세요.',
-    image: 'https://picsum.photos/seed/coffee-scrub/400/300',
-    tags: ['스크럽', '바디케어', '각질제거'],
-    difficulty: 'easy',
-    time: '10분',
-    link: 'https://example.com/coffee-scrub',
-    materials: [
-      '커피 찌꺼기 1/2컵',
-      '코코넛 오일 1/4컵',
-      '흑설탕 1/4컵',
-      '바닐라 에센셜 오일 몇 방울 (선택사항)'
-    ],
-    steps: [
-      '커피 찌꺼기를 완전히 말립니다.',
-      '말린 커피 찌꺼기, 흑설탕, 코코넛 오일을 볼에 넣고 잘 섞어줍니다.',
-      '원하는 경우 바닐라 에센셜 오일을 몇 방울 첨가합니다.',
-      '깨끗한 용기에 담아 보관합니다.',
-      '사용 시 젖은 피부에 부드럽게 마사지하듯 문지른 후 물로 씻어냅니다.',
-      '일주일에 1-2회 사용을 권장합니다.'
-    ]
-  },
-  {
-    id: '6',
-    title: '커피 지우개 크레용',
-    description: '어린이와 함께 만드는 친환경 미술 도구, 커피 지우개 크레용으로 창의력을 키워보세요.',
-    image: 'https://picsum.photos/seed/coffee-crayons/400/300',
-    tags: ['공예', '어린이', '미술'],
-    difficulty: 'hard',
-    time: '2시간',
-    link: 'https://example.com/coffee-crayons',
-    materials: [
-      '커피 찌꺼기 1/2컵',
-      '물 1컵',
-      '밀가루 1컵',
-      '소금 1/2컵',
-      '식용유 1큰술'
-    ],
-    steps: [
-      '냄비에 물을 끓이고 커피 찌꺼기를 넣어 약 5분간 끓입니다.',
-      '커피물을 체로 걸러 찌꺼기는 따로 보관합니다.',
-      '냄비에 밀가루, 소금, 커피물, 식용유를 넣고 잘 섞어줍니다.',
-      '약불에서 덩어리가 생길 때까지 저어줍니다.',
-      '반죽이 식으면 원하는 모양으로 성형합니다.',
-      '24시간 동안 완전히 말립니다.',
-      '건조된 크레용을 종이에 문질러 사용합니다.'
-    ]
-  }
+// 원두 종류 목록
+const beanTypes = [
+  { value: "ethiopia", label: "에티오피아 예가체프" },
+  { value: "colombia", label: "콜롬비아 수프리모" },
+  { value: "brazil", label: "브라질 산토스" },
+  { value: "guatemala", label: "과테말라 안티구아" },
+  { value: "general", label: "원두 종류 상관없음" },
 ];
+
+// 대화 상태
+enum ConversationState {
+  START,
+  ASKING_PURPOSE,
+  ASKING_BEAN_TYPE,
+  GENERATING_SOLUTION,
+  SOLUTION_READY,
+}
 
 const AISolutionsPage = () => {
-  const [selectedPurpose, setSelectedPurpose] = useState('all');
-  const [selectedBeanType, setSelectedBeanType] = useState('all');
-  const [recommendations, setRecommendations] = useState(mockRecommendations);
-  const [selectedRecommendation, setSelectedRecommendation] = useState<AiRecommendation | null>(null);
-  const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
-  // 원두 종류 목록 (실제로는 API에서 가져올 수 있음)
-  const beanTypes = [
-    { value: 'all', label: '모든 원두' },
-    { value: 'ethiopia', label: '에티오피아 예가체프' },
-    { value: 'colombia', label: '콜롬비아 수프리모' },
-    { value: 'brazil', label: '브라질 산토스' },
-    { value: 'guatemala', label: '과테말라 안티구아' },
-  ];
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "1",
+      role: "assistant",
+      content:
+        "안녕하세요! 커피 찌꺼기를 활용한 다양한 업사이클링 방법을 알려드릴게요. 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+      timestamp: new Date(),
+    },
+  ]);
 
-  // 활용 목적에 따른 필터링
-  const handleFilterChange = (purpose: string) => {
-    setSelectedPurpose(purpose);
-    
-    if (purpose === 'all') {
-      setRecommendations(mockRecommendations);
-      return;
+  const [conversationState, setConversationState] = useState<ConversationState>(
+    ConversationState.ASKING_PURPOSE
+  );
+  const [selectedPurpose, setSelectedPurpose] = useState<string | null>(null);
+  const [selectedBeanType, setSelectedBeanType] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedSolution, setSelectedSolution] =
+    useState<AiRecommendation | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [inputMessage, setInputMessage] = useState("");
+
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 스크롤을 항상 아래로 유지
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
-    
-    // 목적에 따른 태그 필터링 (실제로는 API 호출로 대체될 수 있음)
-    const filteredResults = mockRecommendations.filter(rec => 
-      rec.tags.some(tag => 
-        (purpose === 'scrub' && ['스크럽', '각질제거'].includes(tag)) ||
-        (purpose === 'fertilizer' && ['퇴비', '비료'].includes(tag)) ||
-        (purpose === 'fragrance' && ['방향제', '탈취'].includes(tag)) ||
-        (purpose === 'craft' && ['공예', '인테리어'].includes(tag)) ||
-        (purpose === 'soap' && ['비누', '바디케어'].includes(tag))
-      )
-    );
-    
-    setRecommendations(filteredResults);
+  }, [messages]);
+
+  // 포커스 관리
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [conversationState]);
+
+  // 해시 ID 생성 함수
+  const generateId = () => {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2);
   };
 
-  // 원두 종류에 따른 필터링 (실제 구현에서는 API 호출)
-  const handleBeanTypeChange = (beanType: string) => {
-    setSelectedBeanType(beanType);
-    // 실제로는 beanType을 API로 전송하여 맞춤형 결과를 받아올 수 있음
-    // 여기서는 단순히 표시만 하고 목업 데이터를 그대로 사용
+  // 사용자 메시지 처리
+  const handleUserMessageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!inputMessage.trim()) return;
+
+    // 사용자 메시지 추가
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: "user",
+      content: inputMessage,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
+
+    // 현재 대화 상태에 따른 처리
+    if (conversationState === ConversationState.ASKING_PURPOSE) {
+      await handlePurposeInput(inputMessage);
+    } else if (conversationState === ConversationState.ASKING_BEAN_TYPE) {
+      await handleBeanTypeInput(inputMessage);
+    } else if (conversationState === ConversationState.SOLUTION_READY) {
+      // 솔루션 이미 생성된 상태에서 사용자가 새 메시지를 보내면 새로운 질문으로 간주
+      resetConversation();
+
+      // 새 메시지에 대한 답변
+      setTimeout(() => {
+        const assistantMessage: ChatMessage = {
+          id: generateId(),
+          role: "assistant",
+          content:
+            "다른 업사이클링 방법을 찾아볼까요? 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+        setConversationState(ConversationState.ASKING_PURPOSE);
+      }, 500);
+    }
   };
 
-  // 선택한 추천 상세 보기
-  const handleViewDetails = (recommendation: AiRecommendation) => {
-    setSelectedRecommendation(recommendation);
+  // 용도 입력 처리
+  const handlePurposeInput = async (input: string) => {
+    let purposeValue = "";
+
+    // 입력 텍스트를 기반으로 용도 추출
+    for (const purpose of purposeOptions) {
+      if (
+        input.toLowerCase().includes(purpose.label.toLowerCase()) ||
+        input.toLowerCase().includes(purpose.value.toLowerCase())
+      ) {
+        purposeValue = purpose.value;
+        break;
+      }
+    }
+
+    // 매칭되는 용도가 없는 경우 사용자 입력을 그대로 사용
+    if (!purposeValue) {
+      purposeValue = input.trim();
+    }
+
+    setSelectedPurpose(purposeValue);
+
+    // 원두 종류 질문
+    setTimeout(() => {
+      const assistantMessage: ChatMessage = {
+        id: generateId(),
+        role: "assistant",
+        content:
+          "어떤 원두 찌꺼기를 활용하실 건가요? 특정 원두 종류가 있으시면 알려주세요. 원두 종류가 상관없다면 '상관없음'이라고 말씀해주세요.",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+      setConversationState(ConversationState.ASKING_BEAN_TYPE);
+    }, 500);
+  };
+
+  // 원두 종류 입력 처리
+  const handleBeanTypeInput = async (input: string) => {
+    let beanTypeValue = "";
+
+    // '상관없음' 또는 유사한 응답 처리
+    if (
+      input.includes("상관없") ||
+      input.includes("상관 없") ||
+      input.includes("아무거나") ||
+      input.includes("모르") ||
+      input.includes("어떤 것이든")
+    ) {
+      beanTypeValue = "general";
+    } else {
+      // 입력 텍스트를 기반으로 원두 종류 추출
+      for (const bean of beanTypes) {
+        if (
+          input.toLowerCase().includes(bean.label.toLowerCase()) ||
+          input.toLowerCase().includes(bean.value.toLowerCase())
+        ) {
+          beanTypeValue = bean.value;
+          break;
+        }
+      }
+
+      // 매칭되는 원두 종류가 없는 경우 사용자 입력을 그대로 사용
+      if (!beanTypeValue) {
+        beanTypeValue = input.trim();
+      }
+    }
+
+    setSelectedBeanType(beanTypeValue);
+
+    // 로딩 메시지 추가
+    const loadingId = generateId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: loadingId,
+        role: "system",
+        content: "솔루션을 생성 중입니다...",
+        timestamp: new Date(),
+      },
+    ]);
+
+    setConversationState(ConversationState.GENERATING_SOLUTION);
+
+    // 솔루션 생성 요청
+    await generateSolution(loadingId, selectedPurpose!, beanTypeValue);
+  };
+
+  // 채팅 옵션 선택 처리
+  const handleOptionSelect = async (option: ChatOption) => {
+    // 사용자 선택 메시지 추가
+    const userMessage: ChatMessage = {
+      id: generateId(),
+      role: "user",
+      content: option.text,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+
+    // 액션에 따른 처리
+    if (option.action === "restart") {
+      // 대화 재시작
+      resetConversation();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: "assistant",
+          content:
+            "새로운 업사이클링 방법을 찾아볼까요? 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+          timestamp: new Date(),
+        },
+      ]);
+
+      setConversationState(ConversationState.ASKING_PURPOSE);
+    } else if (option.action === "generate") {
+      // 다른 솔루션 생성
+      const loadingId = generateId();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: loadingId,
+          role: "system",
+          content: "다른 솔루션을 생성 중입니다...",
+          timestamp: new Date(),
+        },
+      ]);
+
+      await generateSolution(loadingId, selectedPurpose!, selectedBeanType!);
+    } else if (
+      option.action === "view-alt-solution" &&
+      option.solutionIndex !== undefined
+    ) {
+      // 최신 메시지에서 추가 솔루션 찾기
+      const latestMessage = [...messages]
+        .reverse()
+        .find((m) => m.additionalSolutions && m.additionalSolutions.length > 0);
+
+      if (
+        latestMessage &&
+        latestMessage.additionalSolutions &&
+        option.solutionIndex < latestMessage.additionalSolutions.length
+      ) {
+        const selectedAltSolution =
+          latestMessage.additionalSolutions[option.solutionIndex];
+
+        // 선택된 대체 솔루션 표시
+        const assistantMessage: ChatMessage = {
+          id: generateId(),
+          role: "assistant",
+          content: `${selectedAltSolution.title} 방법을 선택하셨습니다!\n\n${selectedAltSolution.description}`,
+          timestamp: new Date(),
+          solution: selectedAltSolution,
+          options: [
+            {
+              id: "view-details",
+              text: "상세 보기",
+              action: "none",
+            },
+            {
+              id: "generate-more",
+              text: "다른 방법 추천",
+              action: "generate",
+            },
+            {
+              id: "restart",
+              text: "처음부터 다시",
+              action: "restart",
+            },
+          ],
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+    }
+  };
+
+  // 대화 상태 초기화
+  const resetConversation = () => {
+    setSelectedPurpose(null);
+    setSelectedBeanType(null);
+    setConversationState(ConversationState.ASKING_PURPOSE);
+  };
+
+  // 솔루션 생성 API 호출
+  const generateSolution = async (
+    loadingId: string,
+    purpose: string,
+    beanType: string
+  ) => {
+    setIsGenerating(true);
+
+    try {
+      console.log(`목적: ${purpose}, 원두 종류: ${beanType}`);
+
+      // API 호출
+      const response = await apiClient.post("/api/solutions/generate", {
+        purpose: purpose, // 실제 선택된 용도 값
+        beanType: beanType, // 실제 선택된 원두 종류 값
+      });
+
+      console.log("API 전체 응답:", response);
+
+      // 응답 데이터 처리
+      let solution: AiRecommendation;
+      let additionalSolutions: AiRecommendation[] = [];
+
+      if (
+        response.data &&
+        response.data.data &&
+        Array.isArray(response.data.data) &&
+        response.data.data.length > 0
+      ) {
+        // 데이터가 배열 형태로 오는 경우
+        solution = response.data.data[0]; // 첫 번째 항목을 주요 솔루션으로 사용
+
+        // 나머지 솔루션은 추가 옵션으로 저장
+        if (response.data.data.length > 1) {
+          additionalSolutions = response.data.data.slice(1);
+        }
+
+        console.log("선택된 주요 솔루션:", solution);
+        console.log("추가 솔루션 옵션:", additionalSolutions);
+      } else if (response.data && response.data.data) {
+        // 데이터가 단일 객체로 오는 경우
+        solution = response.data.data;
+        console.log("선택된 솔루션:", solution);
+      } else {
+        // 폴백 솔루션 사용
+        console.warn(
+          "API에서 유효한 데이터를 받지 못했습니다. 폴백 솔루션을 사용합니다."
+        );
+        solution = {
+          id: Math.floor(Math.random() * 1000),
+          title: `${
+            beanTypes.find((b) => b.value === beanType)?.label || beanType
+          } 찌꺼기 ${
+            purposeOptions.find((p) => p.value === purpose)?.label || purpose
+          }`,
+          description: `${
+            beanTypes.find((b) => b.value === beanType)?.label || beanType
+          } 찌꺼기를 사용한 ${
+            purposeOptions.find((p) => p.value === purpose)?.label || purpose
+          } 방법을 안내해드립니다.`,
+          tags: [
+            purposeOptions.find((p) => p.value === purpose)?.label || purpose,
+          ],
+          difficulty: ["쉬움", "보통", "어려움"][Math.floor(Math.random() * 3)],
+          duration: `${Math.floor(Math.random() * 60) + 10}분`,
+          materials: ["말린 커피 찌꺼기", "물", "용기"],
+          steps: [
+            "커피 찌꺼기를 완전히 말립니다.",
+            "다른 재료와 혼합합니다.",
+            "원하는 형태로 만들어 사용합니다.",
+          ],
+        };
+      }
+
+      // 옵션 생성
+      const options = [];
+
+      // 추가 솔루션이 있는 경우 선택 옵션 추가
+      if (additionalSolutions.length > 0) {
+        additionalSolutions.forEach((sol, index) => {
+          options.push({
+            id: `solution-${sol.id}`,
+            text: `${sol.title}`,
+            action: "view-alt-solution",
+            solutionIndex: index,
+          });
+        });
+      }
+
+      // 항상 기본 옵션 추가
+      options.push(
+        {
+          id: "view-details",
+          text: "상세 보기",
+          action: "none",
+        },
+        {
+          id: "generate-more",
+          text: "다른 방법 추천",
+          action: "generate",
+        },
+        {
+          id: "restart",
+          text: "처음부터 다시",
+          action: "restart",
+        }
+      );
+
+      // 응답 메시지 생성
+      const assistantMessage: ChatMessage = {
+        id: loadingId, // 로딩 메시지를 교체
+        role: "assistant",
+        content: `${solution.title} 방법을 찾았어요!\n\n${solution.description}`,
+        timestamp: new Date(),
+        solution: solution,
+        options: options.filter((opt) => opt.id !== "view-details"), // "view-details" 옵션 제외
+        additionalSolutions: additionalSolutions,
+      };
+
+      // 로딩 메시지 교체
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === loadingId ? assistantMessage : msg))
+      );
+
+      setConversationState(ConversationState.SOLUTION_READY);
+    } catch (error) {
+      console.error("솔루션 생성 오류:", error);
+
+      // 오류 메시지 표시
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === loadingId
+            ? {
+                ...msg,
+                role: "assistant",
+                content:
+                  "죄송합니다. 솔루션을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+                options: [
+                  {
+                    id: "retry",
+                    text: "다시 시도",
+                    action: "generate",
+                  },
+                  {
+                    id: "restart",
+                    text: "처음부터 다시",
+                    action: "restart",
+                  },
+                ],
+              }
+            : msg
+        )
+      );
+
+      toast({
+        title: "솔루션 생성 실패",
+        description: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        variant: "destructive",
+        duration: 3000,
+      });
+
+      setConversationState(ConversationState.SOLUTION_READY);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 솔루션 상세 보기
+  const handleViewSolutionDetails = (solution: AiRecommendation) => {
+    setSelectedSolution(solution);
+    setIsDetailOpen(true);
   };
 
   // 난이도 배지 렌더링
   const renderDifficultyBadge = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy':
+    switch (difficulty.toLowerCase()) {
+      case "easy":
+      case "쉬움":
         return <Badge className="bg-green-500">쉬움</Badge>;
-      case 'medium':
+      case "medium":
+      case "보통":
         return <Badge className="bg-yellow-500">보통</Badge>;
-      case 'hard':
+      case "hard":
+      case "어려움":
         return <Badge className="bg-red-500">어려움</Badge>;
       default:
-        return null;
+        return <Badge className="bg-blue-500">{difficulty}</Badge>;
     }
   };
 
@@ -281,294 +576,305 @@ const AISolutionsPage = () => {
       <Header />
       <main className="flex-grow pb-16 md:pb-0 container px-4 py-8">
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-coffee-dark">AI 업사이클링 솔루션</h1>
+          <h1 className="text-3xl font-bold text-coffee-dark">
+            AI 업사이클링 솔루션
+          </h1>
           <p className="text-muted-foreground">
-            커피 찌꺼기의 특성과 원두 종류를 고려한 맞춤형 활용법을 AI가 추천해드립니다.
+            커피 찌꺼기의 특성과 원두 종류를 고려한 맞춤형 활용법을 AI가
+            추천해드립니다.
           </p>
         </div>
-        
-        {/* 필터 섹션 */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Filter className="mr-2 h-5 w-5 text-coffee" />
-              활용 목적 선택
-            </CardTitle>
-            <CardDescription>
-              어떤 용도로 커피 찌꺼기를 활용하고 싶으신가요?
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm font-medium mb-2">활용 목적</p>
-                <Select value={selectedPurpose} onValueChange={handleFilterChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="활용 목적 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {purposeOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium mb-2">원두 종류</p>
-                <Select value={selectedBeanType} onValueChange={handleBeanTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="원두 종류 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {beanTypes.map(bean => (
-                      <SelectItem key={bean.value} value={bean.value}>
-                        {bean.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="col-span-2 md:col-span-1">
-                <p className="text-sm font-medium mb-2">AI 추천 레벨</p>
-                <div className="bg-coffee-cream/30 text-coffee-dark p-3 rounded-md flex items-center">
-                  <Sparkles className="h-5 w-5 mr-2 text-coffee" />
-                  <div className="text-sm">
-                    {user 
-                      ? '맞춤형 추천 활성화' 
-                      : '로그인하면 더 정확한 추천을 제공받을 수 있습니다'}
+
+        {/* 메인 컨텐츠 영역 */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+          {/* 왼쪽 사이드바 - 활용 팁 */}
+          <div className="md:col-span-1 space-y-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Coffee className="mr-2 h-5 w-5 text-coffee" />
+                  커피 찌꺼기 활용 팁
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium">완전히 말리기</h4>
+                      <p className="text-xs text-muted-foreground">
+                        커피 찌꺼기는 습기에 취약하므로 완전히 말려 사용하세요.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Leaf className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium">밀폐 보관</h4>
+                      <p className="text-xs text-muted-foreground">
+                        밀폐 용기에 넣어 서늘하고 건조한 곳에 보관하세요.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                    <Recycle className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-medium">원두 종류별 특성</h4>
+                      <p className="text-xs text-muted-foreground">
+                        다크 로스팅된 원두는 향이 진하고, 라이트 로스팅은 산미가
+                        살아있어요.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            {selectedBeanType !== 'all' && (
-              <div className="bg-blue-50 p-3 rounded-md flex items-center text-sm text-blue-800">
-                <Bot className="h-5 w-5 mr-2 text-blue-600" />
-                <p>
-                  <span className="font-medium">{beanTypes.find(b => b.value === selectedBeanType)?.label}</span>는 
-                  {selectedBeanType === 'ethiopia' ? ' 과일향과 꽃향이 풍부하여 방향제로 활용하기 좋습니다.' :
-                   selectedBeanType === 'colombia' ? ' 균형 잡힌 바디감으로 스크럽과 비누 제작에 적합합니다.' :
-                   selectedBeanType === 'brazil' ? ' 고소한 견과류 향이 있어 화분 퇴비로 사용하기 좋습니다.' :
-                   ' 스모키한 향이 있어 공예품이나 탈취제로 사용하기 적합합니다.'}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* AI 추천 결과 */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-coffee-dark flex items-center mb-4">
-            <Sparkles className="mr-2 h-5 w-5 text-coffee" />
-            AI 추천 업사이클링 방법
-          </h2>
-          
-          {recommendations.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {recommendations.map(recommendation => (
-                <Card key={recommendation.id} className="overflow-hidden flex flex-col hover:shadow-md transition-shadow">
-                  <div className="h-48 overflow-hidden">
-                    <img 
-                      src={recommendation.image} 
-                      alt={recommendation.title} 
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-lg">{recommendation.title}</CardTitle>
-                      {renderDifficultyBadge(recommendation.difficulty)}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Bot className="mr-2 h-5 w-5 text-coffee" />
+                  AI 추천 방식
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground space-y-4">
+                  <p>
+                    에코빈의 AI는 커피 찌꺼기의 특성과 원두 종류를 분석하여
+                    최적의 업사이클링 방법을 추천합니다.
+                  </p>
+                  <p>
+                    채팅 창에서 사용 목적과 원두 종류를 입력하면 맞춤형 솔루션을
+                    제공해드려요.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 오른쪽 메인 영역 - 채팅 인터페이스 */}
+          <div className="md:col-span-3">
+            <Card className="h-[calc(100vh-13rem)] flex flex-col">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center">
+                  <Bot className="mr-2 h-5 w-5 text-eco" />
+                  에코빈 AI 어시스턴트
+                </CardTitle>
+                <CardDescription>
+                  원하는 용도와 원두 종류를 입력하여 맞춤형 업사이클링 솔루션을
+                  받아보세요.
+                </CardDescription>
+              </CardHeader>
+
+              {/* 채팅 영역 */}
+              <CardContent
+                className="flex-1 overflow-auto p-4"
+                ref={chatContainerRef}
+              >
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.role === "user"
+                          ? "justify-end"
+                          : message.role === "system"
+                          ? "justify-center"
+                          : "justify-start"
+                      }`}
+                    >
+                      {message.role === "system" ? (
+                        <div className="bg-gray-100 rounded-lg px-4 py-2 flex items-center">
+                          <Loader className="h-4 w-4 animate-spin mr-2" />
+                          <span>{message.content}</span>
+                        </div>
+                      ) : (
+                        <div
+                          className={`rounded-lg p-4 max-w-[90%] ${
+                            message.role === "user"
+                              ? "bg-coffee text-white"
+                              : "bg-coffee-cream/30 text-coffee-dark"
+                          }`}
+                        >
+                          {message.role === "assistant" && (
+                            <div className="flex items-center mb-2">
+                              <Avatar className="h-6 w-6 mr-2">
+                                <AvatarImage src="/ai-assistant.png" />
+                                <AvatarFallback className="bg-eco text-white">
+                                  AI
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">에코빈 AI</span>
+                            </div>
+                          )}
+
+                          <div className="whitespace-pre-wrap">
+                            {message.content}
+                          </div>
+
+                          {message.solution && (
+                            <div className="mt-4">
+                              <Button
+                                className="bg-coffee/80 hover:bg-coffee text-white"
+                                onClick={() =>
+                                  handleViewSolutionDetails(message.solution!)
+                                }
+                              >
+                                상세 보기
+                              </Button>
+                            </div>
+                          )}
+
+                          {message.options && message.options.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {message.options
+                                .filter(
+                                  (option) =>
+                                    option.action !== "none" &&
+                                    option.id !== "view-details"
+                                )
+                                .map((option) => (
+                                  <Button
+                                    key={option.id}
+                                    variant="outline"
+                                    className="border-coffee text-coffee hover:bg-coffee-cream/20"
+                                    onClick={() => handleOptionSelect(option)}
+                                  >
+                                    {option.text}
+                                  </Button>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <CardDescription className="line-clamp-2">{recommendation.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="py-2">
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {recommendation.tags.map((tag, index) => (
-                        <Badge key={index} variant="outline" className="bg-coffee-cream/20 border-coffee-cream text-coffee-dark">
+                  ))}
+                </div>
+              </CardContent>
+
+              {/* 입력 영역 */}
+              <CardFooter className="p-4 pt-0">
+                <form
+                  onSubmit={handleUserMessageSubmit}
+                  className="w-full flex gap-2"
+                >
+                  <Input
+                    ref={inputRef}
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder={
+                      conversationState === ConversationState.ASKING_PURPOSE
+                        ? "어떤 용도로 활용하고 싶으신가요? (예: 스크럽, 비료, 방향제...)"
+                        : conversationState ===
+                          ConversationState.ASKING_BEAN_TYPE
+                        ? "어떤 원두를 사용하시나요? (상관없으면 '상관없음'이라고 입력하세요)"
+                        : "메시지를 입력하세요..."
+                    }
+                    disabled={
+                      isGenerating ||
+                      conversationState ===
+                        ConversationState.GENERATING_SOLUTION
+                    }
+                    className="border-coffee-cream focus:border-coffee"
+                  />
+                  <Button
+                    type="submit"
+                    className="bg-coffee hover:bg-coffee-dark"
+                    disabled={
+                      isGenerating ||
+                      conversationState ===
+                        ConversationState.GENERATING_SOLUTION
+                    }
+                  >
+                    <Send className="h-5 w-5" />
+                  </Button>
+                </form>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </main>
+
+      {/* 솔루션 상세 대화상자 */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        {selectedSolution && (
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{selectedSolution.title}</DialogTitle>
+              <DialogDescription>
+                {selectedSolution.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="gap-6">
+              <div>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2 flex-wrap">
+                      {selectedSolution.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="bg-coffee-cream/20 border-coffee-cream text-coffee-dark"
+                        >
                           {tag}
                         </Badge>
                       ))}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      소요 시간: {recommendation.time}
-                    </div>
-                  </CardContent>
-                  <CardFooter className="pt-2 mt-auto">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="border-coffee text-coffee hover:bg-coffee-cream/50 w-full"
-                          onClick={() => handleViewDetails(recommendation)}
-                        >
-                          상세 보기
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>{recommendation.title}</DialogTitle>
-                          <DialogDescription>
-                            {recommendation.description}
-                          </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <img 
-                              src={recommendation.image} 
-                              alt={recommendation.title} 
-                              className="w-full rounded-md"
-                            />
-                            <div className="mt-4 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex gap-2">
-                                  {recommendation.tags.map((tag, index) => (
-                                    <Badge key={index} variant="outline" className="bg-coffee-cream/20 border-coffee-cream text-coffee-dark">
-                                      {tag}
-                                    </Badge>
-                                  ))}
-                                </div>
-                                {renderDifficultyBadge(recommendation.difficulty)}
-                              </div>
-                              <div className="text-sm">
-                                <span className="font-medium">소요 시간:</span> {recommendation.time}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            <div>
-                              <h4 className="font-medium text-coffee-dark mb-2">필요한 재료</h4>
-                              <ul className="space-y-1 list-disc pl-5">
-                                {recommendation.materials.map((material, index) => (
-                                  <li key={index} className="text-sm">{material}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            
-                            <Separator />
-                            
-                            <div>
-                              <h4 className="font-medium text-coffee-dark mb-2">만드는 방법</h4>
-                              <ol className="space-y-2 list-decimal pl-5">
-                                {recommendation.steps.map((step, index) => (
-                                  <li key={index} className="text-sm">{step}</li>
-                                ))}
-                              </ol>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <DialogFooter>
-                          {recommendation.link && (
-                            <Button 
-                              className="bg-coffee hover:bg-coffee-dark"
-                              onClick={() => window.open(recommendation.link, '_blank')}
-                            >
-                              <ExternalLink className="mr-2 h-4 w-4" />
-                              상세 튜토리얼 보기
-                            </Button>
-                          )}
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </CardFooter>
-                </Card>
-              ))}
+                    {renderDifficultyBadge(selectedSolution.difficulty)}
+                  </div>
+                </div>
+                <div className="text-sm text-right mb-6">
+                  <span className="font-medium">소요 시간:</span>{" "}
+                  {selectedSolution.duration}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-coffee-dark mb-2">
+                    필요한 재료
+                  </h4>
+                  <ul className="space-y-1 list-disc pl-5">
+                    {selectedSolution.materials.map((material, index) => (
+                      <li key={index} className="text-sm">
+                        {material}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="font-medium text-coffee-dark mb-2">
+                    만드는 방법
+                  </h4>
+                  <ol className="space-y-2 pl-5">
+                    {selectedSolution.steps.map((step, index) => (
+                      <li key={index} className="text-sm">
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
             </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground mb-4">
-                선택한 필터에 맞는 추천 결과가 없습니다.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSelectedPurpose('all');
-                  handleFilterChange('all');
-                }}
+
+            <DialogFooter>
+              <Button
+                className="bg-coffee hover:bg-coffee-dark"
+                onClick={() => setIsDetailOpen(false)}
               >
-                모든 결과 보기
+                닫기
               </Button>
-            </Card>
-          )}
-        </div>
-        
-        {/* 환경 기여도 카드 */}
-        <Card className="bg-eco-light border-eco mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center text-eco-dark">
-              <Leaf className="mr-2 h-5 w-5 text-eco" />
-              내 환경 기여도
-            </CardTitle>
-            <CardDescription>
-              지금까지의 커피 찌꺼기 재활용 활동을 통한 환경 기여도입니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {user ? (
-              <div className="grid gap-6 md:grid-cols-3">
-                <div className="bg-white p-4 rounded-md shadow-sm">
-                  <div className="text-sm text-muted-foreground mb-1">총 수거량</div>
-                  <div className="text-2xl font-bold text-eco-dark">9.5L</div>
-                  <div className="text-xs text-muted-foreground mt-1">최근 3개월 동안</div>
-                </div>
-                <div className="bg-white p-4 rounded-md shadow-sm">
-                  <div className="text-sm text-muted-foreground mb-1">탄소 절감량</div>
-                  <div className="text-2xl font-bold text-eco-dark">5.7kg</div>
-                  <div className="text-xs text-muted-foreground mt-1">CO<sub>2</sub> 배출 감소량</div>
-                </div>
-                <div className="bg-white p-4 rounded-md shadow-sm">
-                  <div className="text-sm text-muted-foreground mb-1">환경 기여 레벨</div>
-                  <div className="text-2xl font-bold text-eco-dark">그린 레벨 2</div>
-                  <div className="text-xs text-muted-foreground mt-1">다음 레벨까지 35%</div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground mb-4">
-                  로그인하면 내 환경 기여도를 확인할 수 있습니다.
-                </p>
-                <Button 
-                  className="bg-eco hover:bg-eco-dark"
-                  onClick={() => navigate('/login')}
-                >
-                  로그인하기
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* 팁 섹션 */}
-        <div className="bg-coffee-cream/30 rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-medium text-coffee-dark mb-3 flex items-center">
-            <Coffee className="mr-2 h-5 w-5 text-coffee" />
-            커피 찌꺼기 보관 및 활용 팁
-          </h3>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="bg-white p-4 rounded-md shadow-sm">
-              <h4 className="font-medium text-coffee-dark mb-2">올바른 보관 방법</h4>
-              <p className="text-sm text-muted-foreground">
-                커피 찌꺼기는 습기에 취약해 곰팡이가 피기 쉬우므로, 활용 전에 완전히 말려 밀폐 용기에 보관하세요.
-                오븐에서 120°C로 약 20분간 구워 살균 효과를 높일 수도 있습니다.
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-md shadow-sm">
-              <h4 className="font-medium text-coffee-dark mb-2">효과적인 활용 시점</h4>
-              <p className="text-sm text-muted-foreground">
-                커피 찌꺼기는 추출 후 24시간 이내에 활용하거나 즉시 건조하는 것이 좋습니다.
-                습한 상태로 오래 방치할 경우 효능이 떨어지고 곰팡이가 발생할 수 있습니다.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-      
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+
       <UserNavbar />
       <Footer />
     </div>
