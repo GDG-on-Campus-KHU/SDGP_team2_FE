@@ -26,6 +26,7 @@ import apiClient from "@/api/apiClient";
 
 // API 서버 기본 URL
 const API_BASE_URL = "http://34.64.59.141:8080";
+// 기존 : https://34.64.59.141.nip.io
 
 interface Location {
   id: number;

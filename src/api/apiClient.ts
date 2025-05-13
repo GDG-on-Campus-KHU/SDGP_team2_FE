@@ -5,8 +5,7 @@ import axios, {
 } from "axios";
 
 // 프록시 대신 직접 서버 URL 사용
-const API_BASE_URL = "https://34.64.59.141.nip.io/";
-// 기존 : http://34.64.59.141:8080/
+const API_BASE_URL = "http://34.64.59.141:8080/";
 
 // API 클라이언트 설정
 const apiClient: AxiosInstance = axios.create({
