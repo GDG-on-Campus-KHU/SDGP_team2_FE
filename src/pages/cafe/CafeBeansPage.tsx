@@ -111,8 +111,6 @@ const CafeBeansPage = () => {
 
   // 원두 삭제 처리
   const handleDelete = async (id: number) => {
-    //setBeans(beans.filter((bean) => bean.beanId !== id));
-
     try {
       const response = await apiClient.delete(`/api/beans/${id}`);
 
