@@ -19,7 +19,8 @@ import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/api/apiClient";
 
 // API 기본 URL 정의
-const API_BASE_URL = "https://34.64.59.141.nip.io/";
+const API_BASE_URL = "https://34.64.59.141.nip.io";
+// 기존 : http://34.64.59.141:8080/
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
