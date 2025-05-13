@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Set GOOGLE_MAPS_API_KEY environment variable
+        run: echo "VITE_GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> .env
+
       - name: Build Vite app
         run: npm run build
 
@@ -32,3 +35,4 @@ jobs:
           channelId: live
           expires: 7d
           firebaseToolsVersion: latest
+
