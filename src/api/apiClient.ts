@@ -5,7 +5,7 @@ import axios, {
 } from "axios";
 
 // 프록시 대신 직접 서버 URL 사용
-const API_BASE_URL = "http://34.64.59.141:8080";
+const API_BASE_URL = "https://34.64.59.141.nip.io/";
 
 // API 클라이언트 설정
 const apiClient: AxiosInstance = axios.create({
@@ -311,7 +311,9 @@ export const getUserPickups = async (status?: string) => {
 
   try {
     // 실제 API가 준비되었을 때 사용할 코드
-    const url = status ? `/api/mypage/pickups?status=${status}` : '/api/mypage/pickups';
+    const url = status
+      ? `/api/mypage/pickups?status=${status}`
+      : "/api/mypage/pickups";
     return await apiClient.get(url);
   } catch (error) {
     console.error("[디버깅] 수거 요청 목록 조회 오류:", error);
