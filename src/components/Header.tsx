@@ -25,7 +25,7 @@ const Header = () => {
           <div className="flex items-center bg-coffee-cream rounded-full p-1.0">
             <img src={Logo} width={36} height={36} />
           </div>
-          <span className="text-xl font-bold text-coffee-dark">에코빈</span>
+          <span className="text-xl font-bold text-coffee-dark">Eco-Bean</span>
         </Link>
 
         <div className="flex items-center space-x-3">
