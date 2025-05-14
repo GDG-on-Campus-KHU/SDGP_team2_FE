@@ -5,12 +5,11 @@ import axios, {
 } from "axios";
 
 // 프록시 대신 직접 서버 URL 사용
-const API_BASE_URL = "https://34.64.59.141.nip.io/";
 // 기존 : http://34.64.59.141:8080/
 
 // API 클라이언트 설정
 const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -52,9 +51,12 @@ const refreshAccessToken = async (): Promise<string> => {
     console.log("[디버깅] 토큰 갱신 시도...");
 
     // 전체 URL 경로 사용 (프록시 대신)
-    const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-      refreshToken,
-    });
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_BASE_URL}/api/auth/refresh`,
+      {
+        refreshToken,
+      }
+    );
 
     console.log("[디버깅] 토큰 갱신 응답:", {
       status: response.status,

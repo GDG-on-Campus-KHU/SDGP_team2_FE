@@ -19,7 +19,6 @@ import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/api/apiClient";
 
 // API 기본 URL 정의
-const API_BASE_URL = "https://34.64.59.141.nip.io";
 // 기존 : http://34.64.59.141:8080/
 
 const LoginPage = () => {
@@ -38,10 +37,10 @@ const LoginPage = () => {
       // 리다이렉트 URL을 명시적으로 지정 (우리 앱의 콜백 경로로)
       const redirectUri = `${window.location.origin}/oauth/google/callback`;
 
-      // URL 파라미터에 리다이렉트 URI 추가
-      const authUrl = `${API_BASE_URL}/api/auth/login/google?redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}`;
+      // URL 파라미터에 리다이렉트 URI 추가\
+      const authUrl = `${
+        import.meta.env.VITE_API_BASE_URL
+      }/api/auth/login/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
       console.log("[디버깅] 구글 로그인 URL:", authUrl);
       window.location.href = authUrl;

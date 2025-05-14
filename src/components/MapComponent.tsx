@@ -24,9 +24,6 @@ import coffeeMarkerIcon from "@/assets/coffee_marker.png";
 // API 클라이언트 추가
 import apiClient from "@/api/apiClient";
 
-// API 서버 기본 URL
-const API_BASE_URL = "http://34.64.59.141:8080";
-
 interface Location {
   id: number;
   name: string;
@@ -83,7 +80,9 @@ const MapComponent = () => {
     try {
       setIsLoading(true);
       // 프록시 대신 전체 URL 사용
-      const response = await axios.get(`${API_BASE_URL}/api/cafes`);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_BASE_URL}/api/cafes`
+      );
 
       // 응답 객체 구조 검증
       if (response.data && response.data.data && response.data.data.content) {
