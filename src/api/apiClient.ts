@@ -5,7 +5,7 @@ import axios, {
 } from "axios";
 
 // 프록시 대신 직접 서버 URL 사용
-// 기존 : http://34.64.59.141:8080/
+const API_BASE_URL = "http://34.64.59.141:8080/";
 
 // API 클라이언트 설정
 const apiClient: AxiosInstance = axios.create({
@@ -135,13 +135,11 @@ apiClient.interceptors.response.use(
       error.response?.data?.code === "AUTH404" &&
       !originalRequest._retry
     ) {
-      console.log("[디버깅] 인증 오류 감지 - 토큰 갱신 시도", errorInfo);
       originalRequest._retry = true;
 
       try {
         // 토큰 갱신 시도
         const newAccessToken = await refreshAccessToken();
-        console.log("[디버깅] 새 액세스 토큰 발급 성공");
 
         // 원래 요청 헤더 업데이트 후 재시도
         originalRequest.headers.set(
@@ -150,21 +148,11 @@ apiClient.interceptors.response.use(
         );
         return apiClient(originalRequest);
       } catch (refreshError) {
-        console.error("[디버깅] 토큰 갱신 실패 - 로그아웃 필요");
-
         // 토큰 갱신 실패 시 로그아웃 처리
         removeTokens();
         window.location.href = "/login";
         return Promise.reject(refreshError);
       }
-    }
-
-    console.error("[디버깅] API 오류:", errorInfo);
-
-    if (error.response) {
-      console.error("[디버깅] 응답 데이터:", error.response.data);
-    } else if (error.request) {
-      console.error("[디버깅] 요청만 전송됨 (응답 없음)");
     }
 
     return Promise.reject(error);

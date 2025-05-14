@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Logo from "@/assets/logo.png";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 const Header = () => {
   const { isAuthenticated, user, logout, userType } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <header className="bg-white shadow-sm h-16 sticky top-0 z-20">
@@ -29,28 +32,21 @@ const Header = () => {
         </Link>
 
         <div className="flex items-center space-x-3">
-          {/* AI 솔루션 버튼 추가 */}
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
+          {/* AI Solution Button */}
           <Button
             onClick={() => navigate("/ai-solutions")}
             className="bg-eco hover:bg-eco-dark text-white"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            AI upcycling guide
+            {t("header.ai_solutions")}
           </Button>
+
           {isAuthenticated ? (
             <>
-              {/* 사용자 유형에 따른 링크 */}
-              {userType === "cafe" && (
-                <Button
-                  variant="outline"
-                  className="border-coffee text-coffee hover:bg-coffee-cream mr-2"
-                  onClick={() => navigate("/cafe/dashboard")}
-                >
-                  카페 관리
-                </Button>
-              )}
-
-              {/* 사용자 프로필 드롭다운 */}
+              {/* User Profile Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -66,16 +62,28 @@ const Header = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
-                  <DropdownMenuLabel>내 계정</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t("common.mypage")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/mypage")}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>마이페이지</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {userType === "user" && (
+                    <>
+                      <DropdownMenuItem onClick={() => navigate("/mypage")}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>{t("common.mypage")}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
+                  {userType === "cafe" && (
+                    <DropdownMenuItem
+                      onClick={() => navigate("/cafe/dashboard")}
+                    >
+                      <span>{t("header.cafe_management")}</span>
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem className="text-red-500" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>로그아웃</span>
+                    <span>{t("common.logout")}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -87,12 +95,12 @@ const Header = () => {
                   variant="outline"
                   className="border-coffee text-coffee hover:bg-coffee-cream"
                 >
-                  로그인
+                  {t("common.login")}
                 </Button>
               </Link>
               <Link to="/register">
                 <Button className="bg-coffee text-white hover:bg-coffee-dark">
-                  회원가입
+                  {t("common.register")}
                 </Button>
               </Link>
             </>

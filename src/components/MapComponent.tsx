@@ -23,6 +23,11 @@ import { useNavigate } from "react-router-dom";
 import coffeeMarkerIcon from "@/assets/coffee_marker.png";
 // API 클라이언트 추가
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
+
+// API 서버 기본 URL
+const API_BASE_URL = "http://34.64.59.141:8080";
+// 기존 : https://34.64.59.141.nip.io
 
 interface Location {
   id: number;
@@ -39,7 +44,7 @@ interface Location {
 }
 
 const MapComponent = () => {
-  console.log("CI/CD 테스트용 콘솔");
+  const { t } = useTranslation();
   const [filterValue, setFilterValue] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
@@ -75,7 +80,6 @@ const MapComponent = () => {
   const [requestAmount, setRequestAmount] = useState<number>(1);
   const [timeError, setTimeError] = useState<string | null>(null);
 
-  // 백엔드 API에서 카페 목록 가져오기
   const fetchCafes = async () => {
     try {
       setIsLoading(true);
@@ -107,7 +111,7 @@ const MapComponent = () => {
             name: cafe.name,
             type: "cafe" as const,
             address: `${cafe.address} ${cafe.detailAddress || ""}`,
-            hours: cafe.openHours || "정보 없음",
+            hours: cafe.openHours || t("map.no_info"),
             openingTime,
             closingTime,
             available: true,
@@ -115,21 +119,22 @@ const MapComponent = () => {
             lng: Number(cafe.longitude),
             description:
               cafe.description ||
-              `수거 일정: ${cafe.collectSchedule || "정보 없음"}`,
+              `${t("map.collection_schedule")}: ${
+                cafe.collectSchedule || t("map.no_info")
+              }`,
           };
         });
 
         setLocations(cafeLocations);
         toast({
-          title: "카페 정보 로드 완료",
-          description: `${cafeLocations.length}개의 카페를 찾았습니다.`,
+          title: t("map.cafes_load_success"),
+          description: t("map.cafes_found", { count: cafeLocations.length }),
         });
       } else {
         toast({
           variant: "destructive",
-          title: "데이터 형식 오류",
-          description:
-            "API 응답 형식이 예상과 다릅니다. 기본 데이터를 표시합니다.",
+          title: t("map.data_format_error"),
+          description: t("map.data_format_error_desc"),
         });
         // 응답 형식 오류 시 기본 데이터 사용
         setLocations(MOCK_LOCATIONS);
@@ -137,9 +142,8 @@ const MapComponent = () => {
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "데이터 로딩 실패",
-        description:
-          "카페 정보를 가져오는데 실패했습니다. 기본 데이터를 표시합니다.",
+        title: t("map.data_loading_failure"),
+        description: t("map.data_loading_failure_desc"),
       });
       // 오류 발생 시 기본 데이터 사용
       setLocations(MOCK_LOCATIONS);
@@ -200,29 +204,27 @@ const MapComponent = () => {
           };
           setUserLocation(coords);
           toast({
-            title: "위치 확인",
-            description: "현재 위치를 기반으로 지도를 표시합니다.",
+            title: t("map.location_confirmation"),
+            description: t("map.location_based_map"),
           });
         },
         (error) => {
-          setLocationError(
-            "위치 정보를 가져오는데 실패했습니다. 설정에서 위치 권한을 확인해주세요."
-          );
+          setLocationError(t("map.location_error_permissions"));
           toast({
             variant: "destructive",
-            title: "위치 오류",
-            description: "위치 정보를 가져오는데 실패했습니다.",
+            title: t("map.location_error"),
+            description: t("map.location_fetch_error"),
           });
           // 위치 정보를 가져올 수 없는 경우 기본 위치 설정 (서울)
           setUserLocation({ lat: 37.5665, lng: 126.978 });
         }
       );
     } else {
-      setLocationError("이 브라우저는 위치 서비스를 지원하지 않습니다.");
+      setLocationError(t("map.browser_location_unsupported"));
       toast({
         variant: "destructive",
-        title: "위치 서비스 미지원",
-        description: "이 브라우저는 위치 서비스를 지원하지 않습니다.",
+        title: t("map.location_service_unsupported"),
+        description: t("map.browser_location_unsupported"),
       });
       // 위치 서비스를 지원하지 않는 경우 기본 위치 설정 (서울)
       setUserLocation({ lat: 37.5665, lng: 126.978 });
@@ -252,7 +254,7 @@ const MapComponent = () => {
         // 사용자 위치 마커
         const userMarker = new google.maps.Marker({
           map: mapInstance,
-          title: "현재 위치",
+          title: t("map.current_location"),
           position: userLocation!,
         });
 
@@ -261,7 +263,7 @@ const MapComponent = () => {
         mapRef.current = mapInstance;
         setIsMapInitialized(true);
       } catch (error) {
-        console.error("맵 초기화 오류:", error);
+        console.error(t("map.map_init_error"), error);
       }
     };
 
@@ -284,14 +286,14 @@ const MapComponent = () => {
 
     const { openingTime, closingTime } = selectedLocationForPickup;
     if (!openingTime || !closingTime) {
-      setTimeError("카페 영업 시간 정보가 없습니다.");
+      setTimeError(t("map.cafe_hours_missing"));
       return false;
     }
 
     // 시간 비교
     if (selectedTime < openingTime || selectedTime > closingTime) {
       setTimeError(
-        `영업 시간(${openingTime} - ${closingTime}) 내에 픽업 시간을 선택해주세요.`
+        t("map.hours_selection_error", { openingTime, closingTime })
       );
       return false;
     }
@@ -303,15 +305,15 @@ const MapComponent = () => {
   const handleFilterChange = (value: string) => {
     setFilterValue(value);
     toast({
-      title: "필터 적용",
+      title: t("map.filter_applied"),
       description:
         value === "all"
-          ? "모든 장소"
+          ? t("map.all_places")
           : value === "cafe"
-          ? "카페"
+          ? t("map.cafe")
           : value === "collection"
-          ? "수거소"
-          : "기업",
+          ? t("map.collection")
+          : t("map.business"),
     });
   };
 
@@ -320,15 +322,15 @@ const MapComponent = () => {
     if (!searchQuery.trim()) {
       toast({
         variant: "destructive",
-        title: "검색어 오류",
-        description: "검색어를 입력해주세요.",
+        title: t("map.search_error"),
+        description: t("map.enter_search_term"),
       });
       return;
     }
 
     toast({
-      title: "검색 중",
-      description: `"${searchQuery}" 검색 결과를 표시합니다.`,
+      title: t("map.searching"),
+      description: t("map.search_results", { query: searchQuery }),
     });
   };
 
@@ -392,8 +394,8 @@ const MapComponent = () => {
     if (!isAuthenticated) {
       toast({
         variant: "destructive",
-        title: "로그인 필요",
-        description: "수거 신청을 위해 로그인이 필요합니다.",
+        title: t("error.login_required"),
+        description: t("map.login_for_collection"),
       });
       return;
     }
@@ -409,8 +411,8 @@ const MapComponent = () => {
     if (!selectedLocationForPickup) {
       toast({
         variant: "destructive",
-        title: "카페 선택 오류",
-        description: "카페 정보를 찾을 수 없습니다.",
+        title: t("map.cafe_selection_error"),
+        description: t("map.cafe_info_missing"),
       });
       return;
     }
@@ -428,19 +430,18 @@ const MapComponent = () => {
         pickupDate: pickupDate,
       };
 
-      console.log(`[디버깅] 수거 요청 데이터:`, pickupRequest);
-
       // API 호출로 수거 요청 생성
       const response = await apiClient.post(
         `/api/pickups/${selectedLocationForPickup.id}`,
         pickupRequest
       );
 
-      console.log(`[디버깅] 수거 요청 응답:`, response);
-
       toast({
-        title: "요청 성공",
-        description: `${selectedLocationForPickup.name}에 ${requestAmount}L 수거 신청이 완료되었습니다. 마이페이지에서 확인하세요.`,
+        title: t("map.request_success"),
+        description: t("map.request_success_detail", {
+          cafeName: selectedLocationForPickup.name,
+          amount: requestAmount,
+        }),
       });
 
       // 마이페이지로 이동 - refresh 플래그와 함께
@@ -449,11 +450,11 @@ const MapComponent = () => {
       setIsPickupModalOpen(false);
       setSelectedLocation(null);
     } catch (error) {
-      console.error("수거 신청 오류:", error);
+      console.error(t("map.collection_request_error"), error);
       toast({
         variant: "destructive",
-        title: "신청 실패",
-        description: "수거 신청 중 오류가 발생했습니다. 다시 시도해주세요.",
+        title: t("map.request_failure"),
+        description: t("map.request_failure_desc"),
       });
     } finally {
       setIsLoading(false);
@@ -464,14 +465,14 @@ const MapComponent = () => {
     if (userLocation && mapRef.current) {
       mapRef.current.setCenter(userLocation);
       toast({
-        title: "현재 위치",
-        description: "지도를 현재 위치로 이동합니다.",
+        title: t("map.current_location"),
+        description: t("map.move_to_current_location"),
       });
     } else {
       toast({
         variant: "destructive",
-        title: "위치 정보 없음",
-        description: "위치 정보를 가져올 수 없습니다.",
+        title: t("map.no_location_info"),
+        description: t("map.location_fetch_error"),
       });
     }
   };
@@ -541,7 +542,7 @@ const MapComponent = () => {
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10">
-            <div className="text-white">지도 로딩 중...</div>
+            <div className="text-white">{t("map.loading_map")}</div>
           </div>
         )}
 
@@ -551,13 +552,13 @@ const MapComponent = () => {
             style={{
               top: "50%",
               left: "50%",
-              transform: "translate(-50%, -130%)",
+              transform: "translate(-50%, -80%)",
             }}
           >
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               onClick={closePopup}
-              aria-label="닫기"
+              aria-label={t("common.close")}
             >
               ✕
             </button>
@@ -575,25 +576,29 @@ const MapComponent = () => {
                 } px-2 py-1 rounded-full text-xs`}
               >
                 {selectedLocation.type === "cafe"
-                  ? "카페"
+                  ? t("map.cafe")
                   : selectedLocation.type === "business"
-                  ? "기업"
-                  : "수거소"}
+                  ? t("map.business")
+                  : t("map.collection")}
               </span>
             </div>
             <p className="text-sm text-gray-600 mb-2">
               {selectedLocation.address}
             </p>
             <p className="text-sm mb-2">
-              <span className="font-medium">운영시간:</span>{" "}
+              <span className="font-medium">{t("map.operating_hours")}:</span>{" "}
               {selectedLocation.hours}
             </p>
             <p className="text-sm mb-3">
-              <span className="font-medium">찌꺼기 수거:</span>
+              <span className="font-medium">
+                {t("map.coffee_grounds_collection")}:
+              </span>
               {selectedLocation.available ? (
-                <span className="text-eco-dark ml-1">가능</span>
+                <span className="text-eco-dark ml-1">{t("map.available")}</span>
               ) : (
-                <span className="text-red-500 ml-1">불가능</span>
+                <span className="text-red-500 ml-1">
+                  {t("map.unavailable")}
+                </span>
               )}
             </p>
             {selectedLocation.description && (
@@ -606,7 +611,7 @@ const MapComponent = () => {
                 className="w-full bg-coffee hover:bg-coffee-dark transition-colors"
                 onClick={() => handleOpenPickupModal(selectedLocation)}
               >
-                수거 신청하기
+                {t("map.request_collection")}
               </Button>
             )}
           </div>
@@ -617,10 +622,11 @@ const MapComponent = () => {
       <Dialog open={isPickupModalOpen} onOpenChange={setIsPickupModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>수거 신청하기</DialogTitle>
+            <DialogTitle>{t("map.request_collection")}</DialogTitle>
             <DialogDescription>
-              {selectedLocationForPickup?.name}에서 커피 찌꺼기를 수거하기 위한
-              정보를 입력해주세요.
+              {t("map.request_collection_desc", {
+                cafeName: selectedLocationForPickup?.name,
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -629,7 +635,9 @@ const MapComponent = () => {
               {/* 수거량 설정 */}
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <Label htmlFor="amount-slider">수거량 (L)</Label>
+                  <Label htmlFor="amount-slider">
+                    {t("map.pickup_amount")}
+                  </Label>
                   <span className="text-sm font-medium">{requestAmount}L</span>
                 </div>
                 <Slider
@@ -644,7 +652,7 @@ const MapComponent = () => {
 
               {/* 픽업 날짜 */}
               <div className="space-y-2">
-                <Label htmlFor="pickup-date">픽업 날짜</Label>
+                <Label htmlFor="pickup-date">{t("map.pickup_date")}</Label>
                 <Input
                   id="pickup-date"
                   type="date"
@@ -657,7 +665,7 @@ const MapComponent = () => {
 
               {/* 픽업 시간 */}
               <div className="space-y-2">
-                <Label htmlFor="pickup-time">픽업 시간</Label>
+                <Label htmlFor="pickup-time">{t("map.pickup_time")}</Label>
                 <Input
                   id="pickup-time"
                   type="time"
@@ -672,7 +680,9 @@ const MapComponent = () => {
                 {timeError && (
                   <Alert variant="destructive" className="py-2">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="text-xs">시간 오류</AlertTitle>
+                    <AlertTitle className="text-xs">
+                      {t("map.time_error")}
+                    </AlertTitle>
                     <AlertDescription className="text-xs">
                       {timeError}
                     </AlertDescription>
@@ -682,10 +692,10 @@ const MapComponent = () => {
 
               {/* 메시지 필드 */}
               <div className="space-y-2">
-                <Label htmlFor="message">메시지 (선택사항)</Label>
+                <Label htmlFor="message">{t("map.message")}</Label>
                 <Textarea
                   id="message"
-                  placeholder="카페 사장님에게 전달할 메시지나 요청사항을 입력해주세요."
+                  placeholder={t("map.message_placeholder")}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   className="resize-none"
@@ -694,8 +704,11 @@ const MapComponent = () => {
               </div>
 
               <div className="text-sm text-muted-foreground mt-2">
-                <p>* 카페 운영 시간: {selectedLocationForPickup?.hours}</p>
-                <p>* 픽업 가능 시간대 내에서 선택해주세요.</p>
+                <p>
+                  * {t("map.cafe_operating_hours")}:{" "}
+                  {selectedLocationForPickup?.hours}
+                </p>
+                <p>* {t("map.pickup_hours")}</p>
               </div>
             </div>
           </div>
@@ -705,7 +718,7 @@ const MapComponent = () => {
               variant="outline"
               onClick={() => setIsPickupModalOpen(false)}
             >
-              취소
+              {t("common.cancel")}
             </Button>
             <Button
               className="bg-coffee hover:bg-coffee-dark"
@@ -717,7 +730,7 @@ const MapComponent = () => {
                 !!timeError
               }
             >
-              신청하기
+              {t("common.submit")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -728,7 +741,7 @@ const MapComponent = () => {
           onClick={handleMyLocationClick}
           className="bg-coffee hover:bg-coffee-dark shadow-lg"
         >
-          내 위치로
+          {t("map.current_location")}
         </Button>
       </div>
     </div>

@@ -44,6 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
 
 // 수거 요청 타입 정의
 interface PickupRequest {
@@ -116,6 +117,7 @@ const dummyRequests: PickupRequest[] = [
 
 const CafeRequestsPage = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<PickupRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<PickupRequest | null>(
     null
@@ -156,8 +158,8 @@ const CafeRequestsPage = () => {
         console.error("[디버깅] 수거 요청 조회 중 예상치 못한 오류:", error);
 
         toast({
-          title: "데이터 로딩 실패",
-          description: "데이터 로딩 실패",
+          title: t("error.generic_error"),
+          description: t("cafe.requests_loading_failure"),
           variant: "destructive",
           duration: 3000,
         });
@@ -210,25 +212,19 @@ const CafeRequestsPage = () => {
         );
 
         toast({
-          title: "API 연결 실패",
-          description:
-            "서버에 상태 변경을 저장하지 못했지만 화면에는 반영되었습니다.",
+          title: t("cafe.api_connection_failure"),
+          description: t("cafe.status_change_saved_ui"),
           duration: 3000,
         });
       }
 
-      const statusText =
-        newStatus === "ACCEPTED"
-          ? "수락됨"
-          : newStatus === "REJECTED"
-          ? "거절됨"
-          : newStatus === "COMPLETED"
-          ? "완료됨"
-          : "대기 중";
+      const statusText = getStatusText(newStatus);
 
       toast({
-        title: "상태 변경 완료",
-        description: `수거 요청이 ${statusText}으로 변경되었습니다.`,
+        title: t("cafe.status_change_success"),
+        description: t("cafe.status_change_success_desc", {
+          status: statusText,
+        }),
         duration: 3000,
       });
 
@@ -236,11 +232,9 @@ const CafeRequestsPage = () => {
     } catch (error: unknown) {
       console.error("[디버깅] 요청 상태 변경 중 예상치 못한 오류:", error);
 
-      const errorMessage = "요청 상태 변경 중 오류가 발생했습니다.";
-
       toast({
-        title: "상태 변경 실패",
-        description: errorMessage,
+        title: t("cafe.status_change_failure"),
+        description: t("cafe.status_change_failure_desc"),
         variant: "destructive",
         duration: 3000,
       });
@@ -256,7 +250,7 @@ const CafeRequestsPage = () => {
             variant="outline"
             className="border-yellow-500 text-yellow-700 bg-yellow-50"
           >
-            대기 중
+            {t("mypage.pending")}
           </Badge>
         );
       case "ACCEPTED":
@@ -265,7 +259,7 @@ const CafeRequestsPage = () => {
             variant="outline"
             className="border-blue-500 text-blue-700 bg-blue-50"
           >
-            수락됨
+            {t("mypage.accepted")}
           </Badge>
         );
       case "COMPLETED":
@@ -274,7 +268,7 @@ const CafeRequestsPage = () => {
             variant="outline"
             className="border-green-500 text-green-700 bg-green-50"
           >
-            완료됨
+            {t("mypage.completed")}
           </Badge>
         );
       case "REJECTED":
@@ -283,7 +277,7 @@ const CafeRequestsPage = () => {
             variant="outline"
             className="border-red-500 text-red-700 bg-red-50"
           >
-            거절됨
+            {t("mypage.rejected")}
           </Badge>
         );
       default:
@@ -295,13 +289,13 @@ const CafeRequestsPage = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "대기 중";
+        return t("mypage.pending");
       case "ACCEPTED":
-        return "수락됨";
+        return t("mypage.accepted");
       case "COMPLETED":
-        return "완료됨";
+        return t("mypage.completed");
       case "REJECTED":
-        return "거절됨";
+        return t("mypage.rejected");
       default:
         return status;
     }
@@ -312,7 +306,7 @@ const CafeRequestsPage = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader className="h-10 w-10 text-coffee animate-spin" />
-        <span className="ml-2">수거 요청을 불러오는 중입니다...</span>
+        <span className="ml-2">{t("cafe.loading_requests")}</span>
       </div>
     );
   }
@@ -320,12 +314,18 @@ const CafeRequestsPage = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-coffee-dark">수거 요청 관리</h2>
+        <h2 className="text-3xl font-bold text-coffee-dark">
+          {t("cafe.requests")}
+        </h2>
         <div className="flex space-x-2">
-          <Badge className="bg-yellow-500">{pendingRequests.length} 대기</Badge>
-          <Badge className="bg-blue-500">{acceptedRequests.length} 수락</Badge>
+          <Badge className="bg-yellow-500">
+            {pendingRequests.length} {t("cafe.pending_count")}
+          </Badge>
+          <Badge className="bg-blue-500">
+            {acceptedRequests.length} {t("cafe.accepted_count")}
+          </Badge>
           <Badge className="bg-green-500">
-            {completedRequests.length} 완료
+            {completedRequests.length} {t("cafe.completed_count")}
           </Badge>
         </div>
       </div>
@@ -338,16 +338,16 @@ const CafeRequestsPage = () => {
       >
         <TabsList className="w-full max-w-md mb-4">
           <TabsTrigger value="all" className="flex-1">
-            전체
+            {t("market.all")}
           </TabsTrigger>
           <TabsTrigger value="pending" className="flex-1">
-            대기 중
+            {t("mypage.pending")}
           </TabsTrigger>
           <TabsTrigger value="accepted" className="flex-1">
-            수락됨
+            {t("mypage.accepted")}
           </TabsTrigger>
           <TabsTrigger value="completed" className="flex-1">
-            완료됨
+            {t("mypage.completed")}
           </TabsTrigger>
         </TabsList>
 
@@ -355,22 +355,22 @@ const CafeRequestsPage = () => {
         <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>모든 수거 요청</CardTitle>
-              <CardDescription>
-                모든 수거 요청 내역을 확인하고 관리할 수 있습니다.
-              </CardDescription>
+              <CardTitle>{t("cafe.all_requests")}</CardTitle>
+              <CardDescription>{t("cafe.all_requests_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>요청자</TableHead>
-                    <TableHead>신청일</TableHead>
-                    <TableHead>수거 희망일</TableHead>
-                    <TableHead>원두 종류</TableHead>
-                    <TableHead>요청량</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead className="text-right">관리</TableHead>
+                    <TableHead>{t("cafe.requester")}</TableHead>
+                    <TableHead>{t("cafe.request_date")}</TableHead>
+                    <TableHead>{t("cafe.pickup_date")}</TableHead>
+                    <TableHead>{t("cafe.bean_type")}</TableHead>
+                    <TableHead>{t("cafe.amount")}</TableHead>
+                    <TableHead>{t("cafe.status")}</TableHead>
+                    <TableHead className="text-right">
+                      {t("cafe.manage")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -414,7 +414,7 @@ const CafeRequestsPage = () => {
                             <DropdownMenuItem
                               onClick={() => handleViewRequest(request)}
                             >
-                              상세 보기
+                              {t("cafe.view_detail")}
                             </DropdownMenuItem>
                             {request.status === "PENDING" && (
                               <>
@@ -427,7 +427,7 @@ const CafeRequestsPage = () => {
                                   }
                                   className="text-blue-600"
                                 >
-                                  수락하기
+                                  {t("cafe.accept")}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() =>
@@ -438,7 +438,7 @@ const CafeRequestsPage = () => {
                                   }
                                   className="text-red-600"
                                 >
-                                  거절하기
+                                  {t("cafe.reject")}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -452,7 +452,7 @@ const CafeRequestsPage = () => {
                                 }
                                 className="text-green-600"
                               >
-                                완료 처리
+                                {t("cafe.complete")}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -470,10 +470,8 @@ const CafeRequestsPage = () => {
         <TabsContent value="pending">
           <Card>
             <CardHeader>
-              <CardTitle>대기 중인 요청</CardTitle>
-              <CardDescription>
-                처리 대기 중인 수거 요청입니다. 수락 또는 거절을 선택해주세요.
-              </CardDescription>
+              <CardTitle>{t("cafe.pending_requests")}</CardTitle>
+              <CardDescription>{t("cafe.pending_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               {pendingRequests.length > 0 ? (
@@ -483,10 +481,12 @@ const CafeRequestsPage = () => {
                       <div className="bg-yellow-50 p-4 flex justify-between items-center border-b">
                         <div className="flex items-center gap-3">
                           <Clock className="h-5 w-5 text-yellow-600" />
-                          <h3 className="font-medium">대기 중인 수거 요청</h3>
+                          <h3 className="font-medium">
+                            {t("cafe.pending_requests")}
+                          </h3>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          신청일:{" "}
+                          {t("cafe.request_date")}:{" "}
                           {format(new Date(request.requestDate), "PPP", {
                             locale: ko,
                           })}
@@ -515,7 +515,7 @@ const CafeRequestsPage = () => {
                             <div className="space-y-2">
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="text-sm font-medium">
-                                  수거 희망일:
+                                  {t("cafe.pickup_date")}:
                                 </div>
                                 <div className="text-sm">
                                   {format(new Date(request.pickupDate), "PPP", {
@@ -524,14 +524,14 @@ const CafeRequestsPage = () => {
                                 </div>
 
                                 <div className="text-sm font-medium">
-                                  원두 종류:
+                                  {t("cafe.bean_type")}:
                                 </div>
                                 <div className="text-sm">
                                   {request.beanName}
                                 </div>
 
                                 <div className="text-sm font-medium">
-                                  요청량:
+                                  {t("cafe.amount")}:
                                 </div>
                                 <div className="text-sm">{request.amount}L</div>
                               </div>
@@ -548,7 +548,7 @@ const CafeRequestsPage = () => {
                             }
                           >
                             <X className="mr-1 h-4 w-4" />
-                            거절하기
+                            {t("cafe.reject")}
                           </Button>
                           <Button
                             className="bg-blue-600 hover:bg-blue-700"
@@ -557,7 +557,7 @@ const CafeRequestsPage = () => {
                             }
                           >
                             <CheckCircle2 className="mr-1 h-4 w-4" />
-                            수락하기
+                            {t("cafe.accept")}
                           </Button>
                         </div>
                       </CardContent>
@@ -566,7 +566,7 @@ const CafeRequestsPage = () => {
                 </div>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                  <p>대기 중인 수거 요청이 없습니다.</p>
+                  <p>{t("cafe.no_pending")}</p>
                 </div>
               )}
             </CardContent>
@@ -577,21 +577,19 @@ const CafeRequestsPage = () => {
         <TabsContent value="accepted">
           <Card>
             <CardHeader>
-              <CardTitle>수락된 요청</CardTitle>
-              <CardDescription>
-                수락된 수거 요청 목록입니다. 수거가 완료되면 완료 처리해주세요.
-              </CardDescription>
+              <CardTitle>{t("cafe.accepted_requests")}</CardTitle>
+              <CardDescription>{t("cafe.accepted_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               {acceptedRequests.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>요청자</TableHead>
-                      <TableHead>수거 희망일</TableHead>
-                      <TableHead>요청량</TableHead>
-                      <TableHead>원두 종류</TableHead>
-                      <TableHead>관리</TableHead>
+                      <TableHead>{t("cafe.requester")}</TableHead>
+                      <TableHead>{t("cafe.pickup_date")}</TableHead>
+                      <TableHead>{t("cafe.amount")}</TableHead>
+                      <TableHead>{t("cafe.bean_type")}</TableHead>
+                      <TableHead>{t("cafe.manage")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -627,7 +625,7 @@ const CafeRequestsPage = () => {
                             }
                           >
                             <CheckCircle2 className="mr-1 h-4 w-4" />
-                            완료 처리
+                            {t("cafe.complete")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -636,7 +634,7 @@ const CafeRequestsPage = () => {
                 </Table>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                  <p>수락된 수거 요청이 없습니다.</p>
+                  <p>{t("cafe.no_accepted")}</p>
                 </div>
               )}
             </CardContent>
@@ -647,19 +645,21 @@ const CafeRequestsPage = () => {
         <TabsContent value="completed">
           <Card>
             <CardHeader>
-              <CardTitle>완료된 요청</CardTitle>
-              <CardDescription>수거가 완료된 요청 목록입니다.</CardDescription>
+              <CardTitle>{t("cafe.completed_requests")}</CardTitle>
+              <CardDescription>{t("cafe.completed_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               {completedRequests.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>요청자</TableHead>
-                      <TableHead>수거일</TableHead>
-                      <TableHead>원두 종류</TableHead>
-                      <TableHead>요청량</TableHead>
-                      <TableHead className="text-right">상세</TableHead>
+                      <TableHead>{t("cafe.requester")}</TableHead>
+                      <TableHead>{t("cafe.pickup_date")}</TableHead>
+                      <TableHead>{t("cafe.bean_type")}</TableHead>
+                      <TableHead>{t("cafe.amount")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("cafe.view_detail")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -692,7 +692,7 @@ const CafeRequestsPage = () => {
                             size="sm"
                             onClick={() => handleViewRequest(request)}
                           >
-                            상세보기
+                            {t("cafe.view_detail")}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -701,7 +701,7 @@ const CafeRequestsPage = () => {
                 </Table>
               ) : (
                 <div className="text-center py-10 text-muted-foreground">
-                  <p>완료된 수거 요청이 없습니다.</p>
+                  <p>{t("cafe.no_completed")}</p>
                 </div>
               )}
             </CardContent>
@@ -714,12 +714,13 @@ const CafeRequestsPage = () => {
         {selectedRequest && (
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>수거 요청 상세 정보</DialogTitle>
+              <DialogTitle>{t("cafe.request_detail")}</DialogTitle>
               <DialogDescription>
-                {format(new Date(selectedRequest.requestDate), "PPP", {
-                  locale: ko,
+                {t("cafe.requested_on", {
+                  date: format(new Date(selectedRequest.requestDate), "PPP", {
+                    locale: ko,
+                  }),
                 })}
-                에 신청된 요청입니다.
               </DialogDescription>
             </DialogHeader>
 
@@ -742,27 +743,31 @@ const CafeRequestsPage = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="text-sm font-medium">상태:</div>
+                <div className="text-sm font-medium">{t("cafe.status")}:</div>
                 <div>{renderStatusBadge(selectedRequest.status)}</div>
 
-                <div className="text-sm font-medium">수거 희망일:</div>
+                <div className="text-sm font-medium">
+                  {t("cafe.pickup_date")}:
+                </div>
                 <div className="text-sm">
                   {format(new Date(selectedRequest.pickupDate), "PPP", {
                     locale: ko,
                   })}
                 </div>
 
-                <div className="text-sm font-medium">원두 종류:</div>
+                <div className="text-sm font-medium">
+                  {t("cafe.bean_type")}:
+                </div>
                 <div className="text-sm">{selectedRequest.beanName}</div>
 
-                <div className="text-sm font-medium">요청량:</div>
+                <div className="text-sm font-medium">{t("cafe.amount")}:</div>
                 <div className="text-sm">{selectedRequest.amount}L</div>
               </div>
             </div>
 
             <DialogFooter className="flex justify-between sm:justify-between">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                닫기
+                {t("common.close")}
               </Button>
 
               {selectedRequest.status === "PENDING" && (
@@ -775,7 +780,7 @@ const CafeRequestsPage = () => {
                     }
                   >
                     <XCircle className="mr-1 h-4 w-4" />
-                    거절하기
+                    {t("cafe.reject")}
                   </Button>
                   <Button
                     className="bg-blue-600 hover:bg-blue-700"
@@ -784,7 +789,7 @@ const CafeRequestsPage = () => {
                     }
                   >
                     <CheckCircle2 className="mr-1 h-4 w-4" />
-                    수락하기
+                    {t("cafe.accept")}
                   </Button>
                 </div>
               )}
@@ -797,7 +802,7 @@ const CafeRequestsPage = () => {
                   }
                 >
                   <CheckCircle2 className="mr-1 h-4 w-4" />
-                  완료 처리
+                  {t("cafe.complete")}
                 </Button>
               )}
             </DialogFooter>

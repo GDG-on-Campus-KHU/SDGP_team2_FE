@@ -42,6 +42,7 @@ import UserNavbar from "@/components/UserNavbar";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
 
 // 수거 신청 타입 정의 - 정확한 API 응답 구조에 맞게 수정
 interface PickupRequest {
@@ -120,27 +121,18 @@ const UserMyPage = () => {
   const [pickupMessage, setPickupMessage] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { t } = useTranslation();
+
   // 환경 기여도 조회 함수
   const fetchEnvironmentalReport = async () => {
     try {
-      console.log("[디버깅] 환경 기여도 조회 시작...");
-
       const response = await apiClient.get("/api/members/me/report");
-      console.log("[디버깅] 환경 기여도 조회 성공:", response.data);
 
       if (response.data && response.data.data) {
         setEnvReport(response.data.data);
-      } else {
-        console.log("[디버깅] API 응답 형식이 예상과 다릅니다.");
       }
     } catch (error) {
-      console.error("[디버깅] 환경 기여도 조회 오류:", error);
-
-      // 오류 상세 정보 출력
-      if (error.response) {
-        console.error("응답 데이터:", error.response.data);
-        console.error("응답 상태:", error.response.status);
-      }
+      console.log(error);
     }
   };
 
@@ -149,26 +141,20 @@ const UserMyPage = () => {
     try {
       setIsLoading(true);
 
-      console.log("[디버깅] 수거 요청 목록 조회 시작...");
-
       // API에 맞게 정확한 엔드포인트를 사용
       const response = await apiClient.get("/api/mypage/pickups");
-      console.log("[디버깅] 수거 요청 목록 조회 성공:", response.data);
 
       if (response.data && response.data.data) {
         // API 응답 구조에 맞게 데이터 설정
         setRequests(response.data.data);
 
         if (response.data.data.length === 0) {
-          console.log("[디버깅] API 응답이 비어있습니다.");
           setRequests([]);
         }
       } else {
-        console.log("[디버깅] API 응답 형식이 예상과 다릅니다.");
         setRequests([]);
       }
     } catch (error) {
-      console.error("[디버깅] 수거 요청 목록 조회 오류:", error);
       setRequests([]);
 
       toast({
@@ -185,10 +171,7 @@ const UserMyPage = () => {
   // 카페 목록 조회 함수 (새로 추가)
   const fetchAvailableCafes = async () => {
     try {
-      console.log("[디버깅] 카페 목록 조회 시작...");
-
       const response = await apiClient.get("/api/cafes");
-      console.log("[디버깅] 카페 목록 조회 성공:", response.data);
 
       if (
         response.data &&
@@ -197,7 +180,6 @@ const UserMyPage = () => {
       ) {
         setAvailableCafes(response.data.data.content);
       } else {
-        console.log("[디버깅] API 응답 형식이 예상과 다릅니다.");
         // 임시 데이터로 테스트
         setAvailableCafes([
           {
@@ -215,8 +197,6 @@ const UserMyPage = () => {
         ]);
       }
     } catch (error) {
-      console.error("[디버깅] 카페 목록 조회 오류:", error);
-
       // 임시 데이터로 테스트
       setAvailableCafes([
         {
@@ -238,19 +218,13 @@ const UserMyPage = () => {
   // 커피 찌꺼기 목록 조회 함수 (새로 추가)
   const fetchAvailableGrounds = async (cafeId: number) => {
     try {
-      console.log(
-        `[디버깅] 커피 찌꺼기 목록 조회 시작 (카페 ID: ${cafeId})...`
-      );
-
       const response = await apiClient.get(
         `/api/coffee_grounds/cafe/${cafeId}`
       );
-      console.log("[디버깅] 커피 찌꺼기 목록 조회 성공:", response.data);
 
       if (response.data && response.data.data) {
         setAvailableGrounds(response.data.data);
       } else {
-        console.log("[디버깅] API 응답 형식이 예상과 다릅니다.");
         // 임시 데이터로 테스트
         setAvailableGrounds([
           {
@@ -270,8 +244,6 @@ const UserMyPage = () => {
         ]);
       }
     } catch (error) {
-      console.error("[디버깅] 커피 찌꺼기 목록 조회 오류:", error);
-
       // 임시 데이터로 테스트
       setAvailableGrounds([
         {
@@ -303,7 +275,6 @@ const UserMyPage = () => {
   // 다른 페이지에서 새로고침 플래그와 함께 넘어온 경우 데이터 새로고침
   useEffect(() => {
     if (location.state?.refresh && isAuthenticated) {
-      console.log("[디버깅] 새로고침 플래그 감지, 데이터 새로고침 시작");
       fetchPickupRequests();
       fetchEnvironmentalReport();
 
@@ -333,12 +304,8 @@ const UserMyPage = () => {
     try {
       setIsLoading(true);
 
-      console.log(`[디버깅] 수거 요청 삭제 시작: ID=${requestToDelete}`);
-
       // 정확한 API 엔드포인트 사용 - DELETE 메서드로 /api/pickups/{pickupId}
       await apiClient.delete(`/api/pickups/${requestToDelete}`);
-
-      console.log(`[디버깅] 수거 요청 삭제 성공: ID=${requestToDelete}`);
 
       // 요청 목록에서 삭제된 요청 제거
       setRequests(requests.filter((req) => req.pickupId !== requestToDelete));
@@ -356,14 +323,6 @@ const UserMyPage = () => {
       // 환경 기여도 갱신
       fetchEnvironmentalReport();
     } catch (error) {
-      console.error("[디버깅] 수거 요청 삭제 오류:", error);
-
-      // 오류 상세 정보 출력
-      if (error.response) {
-        console.error("응답 데이터:", error.response.data);
-        console.error("응답 상태:", error.response.status);
-      }
-
       toast({
         title: "신청 취소 실패",
         description:
@@ -442,13 +401,6 @@ const UserMyPage = () => {
         fetchPickupRequests();
       }
     } catch (error) {
-      console.error("[디버깅] 수거 요청 생성 오류:", error);
-
-      if (error.response) {
-        console.error("응답 데이터:", error.response.data);
-        console.error("응답 상태:", error.response.status);
-      }
-
       toast({
         title: "수거 신청 실패",
         description: "수거 신청 중 오류가 발생했습니다. 다시 시도해주세요.",
@@ -475,25 +427,25 @@ const UserMyPage = () => {
             variant="outline"
             className="border-yellow-500 text-yellow-700"
           >
-            대기 중
+            {t("mypage.pending")}
           </Badge>
         );
       case "ACCEPTED":
         return (
           <Badge variant="outline" className="border-blue-500 text-blue-700">
-            수락됨
+            {t("mypage.accepted")}
           </Badge>
         );
       case "COMPLETED":
         return (
           <Badge variant="outline" className="border-green-500 text-green-700">
-            완료됨
+            {t("mypage.completed")}
           </Badge>
         );
       case "REJECTED":
         return (
           <Badge variant="outline" className="border-red-500 text-red-700">
-            거절됨
+            {t("mypage.rejected")}
           </Badge>
         );
       default:
@@ -505,31 +457,28 @@ const UserMyPage = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "대기 중";
+        return t("mypage.pending");
       case "ACCEPTED":
-        return "수락됨";
+        return t("mypage.accepted");
       case "COMPLETED":
-        return "완료됨";
+        return t("mypage.completed");
       case "REJECTED":
-        return "거절됨";
+        return t("mypage.rejected");
       default:
         return status;
     }
   };
-
   // 날짜 포맷팅 함수
   const formatDate = (dateString: string) => {
     try {
       return format(new Date(dateString), "PPP", { locale: ko });
     } catch (error) {
-      console.error("날짜 포맷팅 오류:", error);
       return dateString;
     }
   };
 
   // API 재조회 함수
   const refreshData = () => {
-    console.log("[디버깅] 수동 새로고침 시작");
     fetchPickupRequests();
     fetchEnvironmentalReport();
 
@@ -546,10 +495,10 @@ const UserMyPage = () => {
       <main className="flex-grow pb-16 md:pb-0 container px-4 py-8">
         <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-coffee-dark">마이페이지</h1>
-            <p className="text-muted-foreground">
-              나의 수거 내역 및 환경 기여도를 확인해보세요.
-            </p>
+            <h1 className="text-3xl font-bold text-coffee-dark">
+              {t("mypage.title")}
+            </h1>
+            <p className="text-muted-foreground">{t("mypage.subtitle")}</p>
           </div>
 
           <div className="flex gap-2">
@@ -558,7 +507,8 @@ const UserMyPage = () => {
               className="bg-coffee hover:bg-coffee-dark"
               onClick={handleOpenNewRequestDialog}
             >
-              <Plus className="mr-2 h-4 w-4" />새 수거 신청
+              <Plus className="mr-2 h-4 w-4" />
+              {t("mypage.new_request")}
             </Button>
 
             {/* 새로고침 버튼 */}
@@ -569,7 +519,7 @@ const UserMyPage = () => {
               disabled={isLoading}
             >
               <RefreshCcw className="mr-2 h-4 w-4" />
-              새로고침
+              {t("common.refresh")}
             </Button>
           </div>
         </div>
@@ -579,24 +529,26 @@ const UserMyPage = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-medium">
-                이번 달 기여량
+                {t("mypage.monthly_contribution")}
               </CardTitle>
-              <CardDescription>수거한 커피 찌꺼기</CardDescription>
+              <CardDescription>{t("mypage.collected_grounds")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-coffee">
                 {envReport.totalCollected}L
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                지난 달 대비 +28%
+                {t("mypage.carbon_reduction_per_liter")}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">절약 탄소량</CardTitle>
-              <CardDescription>CO2 배출 감소량</CardDescription>
+              <CardTitle className="text-lg font-medium">
+                {t("mypage.carbon_saved")}
+              </CardTitle>
+              <CardDescription>{t("mypage.carbon_reduction")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-eco">
@@ -610,15 +562,17 @@ const UserMyPage = () => {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">완료된 수거</CardTitle>
-              <CardDescription>성공적으로 수거 완료한 횟수</CardDescription>
+              <CardTitle className="text-lg font-medium">
+                {t("mypage.completed_collection")}
+              </CardTitle>
+              <CardDescription>{t("mypage.completed_count")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-coffee-dark">
                 {envReport.reportCount}회
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                꾸준한 활동으로 환경을 보호해요
+                {t("mypage.environmental_impact")}
               </p>
             </CardContent>
           </Card>
@@ -629,7 +583,7 @@ const UserMyPage = () => {
           <div className="flex justify-center items-center py-10">
             <Loader className="animate-spin h-10 w-10 text-coffee" />
             <span className="ml-3 text-coffee-dark">
-              데이터를 불러오는 중...
+              {t("mypage.loading_data")}
             </span>
           </div>
         )}
@@ -639,16 +593,16 @@ const UserMyPage = () => {
           <Tabs defaultValue="pending" className="w-full">
             <TabsList className="w-full max-w-md mb-4">
               <TabsTrigger value="pending" className="flex-1">
-                대기 중 ({pendingRequests.length})
+                {t("mypage.pending")} ({pendingRequests.length})
               </TabsTrigger>
               <TabsTrigger value="accepted" className="flex-1">
-                수락됨 ({acceptedRequests.length})
+                {t("mypage.accepted")} ({acceptedRequests.length})
               </TabsTrigger>
               <TabsTrigger value="completed" className="flex-1">
-                완료됨 ({completedRequests.length})
+                {t("mypage.completed")} ({completedRequests.length})
               </TabsTrigger>
               <TabsTrigger value="rejected" className="flex-1">
-                거절됨 ({rejectedRequests.length})
+                {t("mypage.rejected")} ({rejectedRequests.length})
               </TabsTrigger>
             </TabsList>
 
@@ -656,10 +610,8 @@ const UserMyPage = () => {
             <TabsContent value="pending">
               <Card>
                 <CardHeader>
-                  <CardTitle>대기 중인 신청</CardTitle>
-                  <CardDescription>
-                    카페에서 수락 대기 중인 찌꺼기 수거 신청입니다.
-                  </CardDescription>
+                  <CardTitle>{t("mypage.pending_requests")}</CardTitle>
+                  <CardDescription>{t("mypage.pending_desc")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {pendingRequests.length > 0 ? (
@@ -673,11 +625,12 @@ const UserMyPage = () => {
                             <div className="flex items-center gap-3">
                               <Clock className="h-5 w-5 text-yellow-600" />
                               <h3 className="font-medium">
-                                대기 중인 수거 신청
+                                {t("mypage.pending_requests")}
                               </h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              신청일: {formatDate(request.requestDate)}
+                              {t("cafe.request_date")}:{" "}
+                              {formatDate(request.requestDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
@@ -703,21 +656,22 @@ const UserMyPage = () => {
                                 <div className="space-y-2">
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="text-sm font-medium">
-                                      수거 희망일:
+                                      {t("mypage.pickup_date")}:
                                     </div>
                                     <div className="text-sm">
                                       {formatDate(request.pickupDate)}
                                     </div>
 
                                     <div className="text-sm font-medium">
-                                      원두 종류:
+                                      {t("mypage.bean_type")}:
                                     </div>
                                     <div className="text-sm">
-                                      {request.beanName || "혼합 원두"}
+                                      {request.beanName ||
+                                        t("mypage.mixed_beans")}
                                     </div>
 
                                     <div className="text-sm font-medium">
-                                      수거량:
+                                      {t("mypage.amount")}:
                                     </div>
                                     <div className="text-sm">
                                       {request.amount}L
@@ -727,7 +681,7 @@ const UserMyPage = () => {
                                   {request.message && (
                                     <div className="mt-4">
                                       <div className="text-sm font-medium">
-                                        메시지:
+                                        {t("mypage.message")}:
                                       </div>
                                       <div className="text-sm bg-gray-50 p-3 rounded mt-1 italic">
                                         "{request.message}"
@@ -747,13 +701,13 @@ const UserMyPage = () => {
                                 }
                               >
                                 <Trash2 className="mr-1 h-4 w-4" />
-                                신청 취소
+                                {t("mypage.cancel_request")}
                               </Button>
                               <Button
                                 variant="outline"
                                 onClick={() => handleViewRequest(request)}
                               >
-                                상세 보기
+                                {t("mypage.view_detail")}
                               </Button>
                             </div>
                           </CardContent>
@@ -762,13 +716,7 @@ const UserMyPage = () => {
                     </div>
                   ) : (
                     <div className="text-center py-10 text-muted-foreground">
-                      <p>대기 중인 수거 신청이 없습니다.</p>
-                      <Button
-                        className="mt-4 bg-coffee hover:bg-coffee-dark"
-                        onClick={handleOpenNewRequestDialog}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />새 수거 신청하기
-                      </Button>
+                      <p>{t("mypage.no_accepted")}</p>
                     </div>
                   )}
                 </CardContent>
@@ -776,82 +724,12 @@ const UserMyPage = () => {
             </TabsContent>
 
             {/* 수락됨 탭 */}
-            <TabsContent value="accepted">
-              <Card>
-                <CardHeader>
-                  <CardTitle>수락된 신청</CardTitle>
-                  <CardDescription>
-                    카페에서 수락한 찌꺼기 수거 신청입니다. 예정된 날짜에
-                    방문하세요.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {acceptedRequests.length > 0 ? (
-                    <div className="space-y-4">
-                      {acceptedRequests.map((request) => (
-                        <Card
-                          key={request.pickupId}
-                          className="overflow-hidden"
-                        >
-                          <div className="bg-blue-50 p-4 flex justify-between items-center border-b">
-                            <div className="flex items-center gap-3">
-                              <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                              <h3 className="font-medium">수락된 수거 신청</h3>
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              수거일: {formatDate(request.pickupDate)}
-                            </div>
-                          </div>
-                          <CardContent className="p-5">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-10 w-10">
-                                  <AvatarImage
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`}
-                                    alt={request.cafeName}
-                                  />
-                                  <AvatarFallback className="bg-coffee-cream text-coffee-dark">
-                                    {request.cafeName.substring(0, 2)}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium">
-                                    {request.cafeName}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {request.beanName || "혼합 원두"}{" "}
-                                    {request.amount}L
-                                  </div>
-                                </div>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewRequest(request)}
-                              >
-                                상세 보기
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 text-muted-foreground">
-                      <p>수락된 수거 신청이 없습니다.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* 완료됨 탭 */}
             <TabsContent value="completed">
               <Card>
                 <CardHeader>
-                  <CardTitle>완료된 신청</CardTitle>
+                  <CardTitle>{t("mypage.completed_requests")}</CardTitle>
                   <CardDescription>
-                    성공적으로 완료된 찌꺼기 수거 내역입니다.
+                    {t("mypage.completed_desc")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -865,10 +743,13 @@ const UserMyPage = () => {
                           <div className="bg-green-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <CheckCircle2 className="h-5 w-5 text-green-600" />
-                              <h3 className="font-medium">완료된 수거</h3>
+                              <h3 className="font-medium">
+                                {t("mypage.completed")}
+                              </h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              완료일: {formatDate(request.pickupDate)}
+                              {t("mypage.completed")}:{" "}
+                              {formatDate(request.pickupDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
@@ -888,7 +769,8 @@ const UserMyPage = () => {
                                     {request.cafeName}
                                   </div>
                                   <div className="text-sm text-muted-foreground">
-                                    {request.beanName || "혼합 원두"}{" "}
+                                    {request.beanName ||
+                                      t("mypage.mixed_beans")}{" "}
                                     {request.amount}L
                                   </div>
                                 </div>
@@ -899,7 +781,7 @@ const UserMyPage = () => {
                                   size="sm"
                                   onClick={() => handleViewRequest(request)}
                                 >
-                                  상세 보기
+                                  {t("mypage.view_detail")}
                                 </Button>
                                 <Button
                                   className="bg-green-600 hover:bg-green-700"
@@ -916,7 +798,89 @@ const UserMyPage = () => {
                     </div>
                   ) : (
                     <div className="text-center py-10 text-muted-foreground">
-                      <p>완료된 수거 내역이 없습니다.</p>
+                      <p>{t("mypage.no_completed")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* 완료됨 탭 */}
+            <TabsContent value="completed">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t("mypage.completed_requests")}</CardTitle>
+                  <CardDescription>
+                    {t("mypage.completed_desc")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {completedRequests.length > 0 ? (
+                    <div className="space-y-4">
+                      {completedRequests.map((request) => (
+                        <Card
+                          key={request.pickupId}
+                          className="overflow-hidden"
+                        >
+                          <div className="bg-green-50 p-4 flex justify-between items-center border-b">
+                            <div className="flex items-center gap-3">
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
+                              <h3 className="font-medium">
+                                {t("mypage.completed")}
+                              </h3>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {t("mypage.completed")}:{" "}
+                              {formatDate(request.pickupDate)}
+                            </div>
+                          </div>
+                          <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                  <AvatarImage
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${request.cafeName}`}
+                                    alt={request.cafeName}
+                                  />
+                                  <AvatarFallback className="bg-coffee-cream text-coffee-dark">
+                                    {request.cafeName.substring(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">
+                                    {request.cafeName}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {request.beanName ||
+                                      t("mypage.mixed_beans")}{" "}
+                                    {request.amount}L
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewRequest(request)}
+                                >
+                                  {t("mypage.view_detail")}
+                                </Button>
+                                <Button
+                                  className="bg-green-600 hover:bg-green-700"
+                                  size="sm"
+                                  onClick={() => navigate("/eco-report")}
+                                >
+                                  <BarChart3 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 text-muted-foreground">
+                      <p>{t("mypage.no_completed")}</p>
                     </div>
                   )}
                 </CardContent>
@@ -927,10 +891,8 @@ const UserMyPage = () => {
             <TabsContent value="rejected">
               <Card>
                 <CardHeader>
-                  <CardTitle>거절된 신청</CardTitle>
-                  <CardDescription>
-                    카페 사정으로 거절된 수거 신청입니다.
-                  </CardDescription>
+                  <CardTitle>{t("mypage.rejected_requests")}</CardTitle>
+                  <CardDescription>{t("mypage.rejected_desc")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {rejectedRequests.length > 0 ? (
@@ -943,10 +905,13 @@ const UserMyPage = () => {
                           <div className="bg-red-50 p-4 flex justify-between items-center border-b">
                             <div className="flex items-center gap-3">
                               <XCircle className="h-5 w-5 text-red-600" />
-                              <h3 className="font-medium">거절된 신청</h3>
+                              <h3 className="font-medium">
+                                {t("mypage.rejected")}
+                              </h3>
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              신청일: {formatDate(request.requestDate)}
+                              {t("cafe.request_date")}:{" "}
+                              {formatDate(request.requestDate)}
                             </div>
                           </div>
                           <CardContent className="p-5">
@@ -976,7 +941,7 @@ const UserMyPage = () => {
                                 size="sm"
                                 onClick={() => handleViewRequest(request)}
                               >
-                                상세 보기
+                                {t("mypage.view_detail")}
                               </Button>
                             </div>
                           </CardContent>
@@ -985,7 +950,7 @@ const UserMyPage = () => {
                     </div>
                   ) : (
                     <div className="text-center py-10 text-muted-foreground">
-                      <p>거절된 수거 신청이 없습니다.</p>
+                      <p>{t("mypage.no_rejected")}</p>
                     </div>
                   )}
                 </CardContent>
@@ -1000,9 +965,11 @@ const UserMyPage = () => {
         {selectedRequest && (
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>수거 신청 상세 정보</DialogTitle>
+              <DialogTitle>{t("mypage.request_detail")}</DialogTitle>
               <DialogDescription>
-                {formatDate(selectedRequest.requestDate)}에 신청됨
+                {t("mypage.requested_on", {
+                  date: formatDate(selectedRequest.requestDate),
+                })}
               </DialogDescription>
             </DialogHeader>
 
@@ -1023,26 +990,32 @@ const UserMyPage = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2">
-                <div className="text-sm font-medium">상태:</div>
+                <div className="text-sm font-medium">{t("mypage.status")}:</div>
                 <div>{renderStatusBadge(selectedRequest.status)}</div>
 
-                <div className="text-sm font-medium">수거 희망일:</div>
+                <div className="text-sm font-medium">
+                  {t("mypage.pickup_date")}:
+                </div>
                 <div className="text-sm">
                   {formatDate(selectedRequest.pickupDate)}
                 </div>
 
-                <div className="text-sm font-medium">원두 종류:</div>
+                <div className="text-sm font-medium">
+                  {t("mypage.bean_type")}:
+                </div>
                 <div className="text-sm">
-                  {selectedRequest.beanName || "혼합 원두"}
+                  {selectedRequest.beanName || t("mypage.mixed_beans")}
                 </div>
 
-                <div className="text-sm font-medium">요청량:</div>
+                <div className="text-sm font-medium">{t("mypage.amount")}:</div>
                 <div className="text-sm">{selectedRequest.amount}L</div>
               </div>
 
               {selectedRequest.message && (
                 <div className="pt-2">
-                  <div className="text-sm font-medium">메시지:</div>
+                  <div className="text-sm font-medium">
+                    {t("mypage.message")}:
+                  </div>
                   <div className="text-sm bg-gray-50 p-3 rounded mt-1 italic">
                     "{selectedRequest.message}"
                   </div>
@@ -1052,7 +1025,7 @@ const UserMyPage = () => {
 
             <DialogFooter className="flex sm:justify-between">
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                닫기
+                {t("common.close")}
               </Button>
 
               {selectedRequest.status === "PENDING" && (
@@ -1061,7 +1034,7 @@ const UserMyPage = () => {
                   onClick={() => handleConfirmDelete(selectedRequest.pickupId)}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
-                  신청 취소
+                  {t("mypage.cancel_request")}
                 </Button>
               )}
 
@@ -1071,7 +1044,7 @@ const UserMyPage = () => {
                   onClick={() => navigate("/eco-report")}
                 >
                   <BarChart3 className="mr-1 h-4 w-4" />
-                  환경 리포트 보기
+                  {t("mypage.view_eco_report")}
                 </Button>
               )}
             </DialogFooter>
@@ -1083,16 +1056,18 @@ const UserMyPage = () => {
       <Dialog open={newRequestDialog} onOpenChange={setNewRequestDialog}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>새 수거 신청</DialogTitle>
+            <DialogTitle>{t("mypage.new_request_title")}</DialogTitle>
             <DialogDescription>
-              카페에서 배출된 커피 찌꺼기 수거를 신청합니다.
+              {t("mypage.new_request_desc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
             {/* 카페 선택 */}
             <div>
-              <Label className="font-medium mb-2 block">카페 선택</Label>
+              <Label className="font-medium mb-2 block">
+                {t("mypage.select_cafe")}
+              </Label>
               <div className="grid gap-3 md:grid-cols-2">
                 {availableCafes.map((cafe) => (
                   <Card
@@ -1112,7 +1087,7 @@ const UserMyPage = () => {
                         {cafe.address}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        영업시간: {cafe.openHours}
+                        {t("map.operating_hours")}: {cafe.openHours}
                       </p>
                     </CardContent>
                   </Card>
@@ -1124,7 +1099,7 @@ const UserMyPage = () => {
             {selectedCafe && (
               <div>
                 <Label className="font-medium mb-2 block">
-                  수거할 커피 찌꺼기 선택
+                  {t("mypage.select_grounds")}
                 </Label>
                 <div className="grid gap-3 md:grid-cols-2">
                   {availableGrounds.map((ground) => (
@@ -1142,7 +1117,9 @@ const UserMyPage = () => {
                           {ground.beanName}
                         </h4>
                         <p className="text-xs text-muted-foreground mt-1">
-                          남은 양: {ground.remainingAmount}L
+                          {t("mypage.remaining_amount", {
+                            amount: ground.remainingAmount,
+                          })}
                         </p>
                       </CardContent>
                     </Card>
@@ -1156,7 +1133,9 @@ const UserMyPage = () => {
               <>
                 <div>
                   <div className="flex justify-between mb-2">
-                    <Label className="font-medium">수거량 (L)</Label>
+                    <Label className="font-medium">
+                      {t("mypage.pickup_amount")}
+                    </Label>
                     <span className="text-sm font-medium">{pickupAmount}L</span>
                   </div>
                   <Slider
@@ -1170,7 +1149,9 @@ const UserMyPage = () => {
 
                 {/* 수거 날짜 선택 */}
                 <div>
-                  <Label className="font-medium mb-2 block">수거 희망일</Label>
+                  <Label className="font-medium mb-2 block">
+                    {t("mypage.desired_pickup_date")}
+                  </Label>
                   <Input
                     type="date"
                     value={pickupDate}
@@ -1182,10 +1163,10 @@ const UserMyPage = () => {
                 {/* 메시지 입력 (선택사항) */}
                 <div>
                   <Label className="font-medium mb-2 block">
-                    메시지 (선택사항)
+                    {t("mypage.message_optional")}
                   </Label>
                   <Textarea
-                    placeholder="카페 사장님에게 전달할 메시지나 요청사항을 입력해주세요."
+                    placeholder={t("map.message_placeholder")}
                     value={pickupMessage}
                     onChange={(e) => setPickupMessage(e.target.value)}
                     className="resize-none"
@@ -1202,7 +1183,7 @@ const UserMyPage = () => {
               onClick={() => setNewRequestDialog(false)}
               disabled={isSubmitting}
             >
-              취소
+              {t("common.cancel")}
             </Button>
             <Button
               className="bg-coffee hover:bg-coffee-dark"
@@ -1212,10 +1193,10 @@ const UserMyPage = () => {
               {isSubmitting ? (
                 <>
                   <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  처리 중...
+                  {t("common.loading")}
                 </>
               ) : (
-                <>신청하기</>
+                <>{t("common.submit")}</>
               )}
             </Button>
           </DialogFooter>
@@ -1226,10 +1207,8 @@ const UserMyPage = () => {
       <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>수거 신청 취소</DialogTitle>
-            <DialogDescription>
-              이 수거 신청을 취소하시겠습니까? 이 작업은 되돌릴 수 없습니다.
-            </DialogDescription>
+            <DialogTitle>{t("mypage.cancel_request")}</DialogTitle>
+            <DialogDescription>{t("mypage.cancel_confirm")}</DialogDescription>
           </DialogHeader>
 
           <DialogFooter className="flex justify-between mt-4">
@@ -1238,7 +1217,7 @@ const UserMyPage = () => {
               onClick={() => setConfirmDeleteDialog(false)}
               disabled={isLoading}
             >
-              취소
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -1248,12 +1227,12 @@ const UserMyPage = () => {
               {isLoading ? (
                 <>
                   <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  처리 중...
+                  {t("common.loading")}
                 </>
               ) : (
                 <>
                   <Trash2 className="mr-2 h-4 w-4" />
-                  신청 취소
+                  {t("mypage.cancel_request")}
                 </>
               )}
             </Button>

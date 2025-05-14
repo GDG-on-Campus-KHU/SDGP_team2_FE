@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useTransition } from "react";
 import {
   Card,
   CardContent,
@@ -37,6 +37,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
 
 // AI 추천 결과 타입
 interface AiRecommendation {
@@ -108,13 +109,13 @@ const AISolutionsPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuth();
+  const { t } = useTranslation();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       role: "assistant",
-      content:
-        "안녕하세요! 커피 찌꺼기를 활용한 다양한 업사이클링 방법을 알려드릴게요. 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+      content: t("ai_solutions.chat_purpose"),
       timestamp: new Date(),
     },
   ]);
@@ -184,8 +185,7 @@ const AISolutionsPage = () => {
         const assistantMessage: ChatMessage = {
           id: generateId(),
           role: "assistant",
-          content:
-            "다른 업사이클링 방법을 찾아볼까요? 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+          content: t("ai_solutions.chat_purpose"),
           timestamp: new Date(),
         };
 
@@ -222,8 +222,7 @@ const AISolutionsPage = () => {
       const assistantMessage: ChatMessage = {
         id: generateId(),
         role: "assistant",
-        content:
-          "어떤 원두 찌꺼기를 활용하실 건가요? 특정 원두 종류가 있으시면 알려주세요. 원두 종류가 상관없다면 '상관없음'이라고 말씀해주세요.",
+        content: t("ai_solutions.chat_bean"),
         timestamp: new Date(),
       };
 
@@ -236,43 +235,18 @@ const AISolutionsPage = () => {
   const handleBeanTypeInput = async (input: string) => {
     let beanTypeValue = "";
 
-    // '상관없음' 또는 유사한 응답 처리
-    if (
-      input.includes("상관없") ||
-      input.includes("상관 없") ||
-      input.includes("아무거나") ||
-      input.includes("모르") ||
-      input.includes("어떤 것이든")
-    ) {
-      beanTypeValue = "general";
-    } else {
-      // 입력 텍스트를 기반으로 원두 종류 추출
-      for (const bean of beanTypes) {
-        if (
-          input.toLowerCase().includes(bean.label.toLowerCase()) ||
-          input.toLowerCase().includes(bean.value.toLowerCase())
-        ) {
-          beanTypeValue = bean.value;
-          break;
-        }
-      }
-
-      // 매칭되는 원두 종류가 없는 경우 사용자 입력을 그대로 사용
-      if (!beanTypeValue) {
-        beanTypeValue = input.trim();
-      }
-    }
+    beanTypeValue = input.trim();
 
     setSelectedBeanType(beanTypeValue);
 
     // 로딩 메시지 추가
     const loadingId = generateId();
-    setMessages((prev) => [
+    setMessages((prev:any) => [
       ...prev,
       {
         id: loadingId,
         role: "system",
-        content: "솔루션을 생성 중입니다...",
+        content: t("ai_solutions.generating"),
         timestamp: new Date(),
       },
     ]);
@@ -305,8 +279,7 @@ const AISolutionsPage = () => {
         {
           id: generateId(),
           role: "assistant",
-          content:
-            "새로운 업사이클링 방법을 찾아볼까요? 어떤 용도로 활용하고 싶으신지 알려주세요. (예: 스크럽, 비료, 방향제, 공예품, 비누 등)",
+          content: t("ai_solutions.chat_purpose"),
           timestamp: new Date(),
         },
       ]);
@@ -320,7 +293,7 @@ const AISolutionsPage = () => {
         {
           id: loadingId,
           role: "system",
-          content: "다른 솔루션을 생성 중입니다...",
+          content: t("ai_solutions.generating"),
           timestamp: new Date(),
         },
       ]);
@@ -347,23 +320,23 @@ const AISolutionsPage = () => {
         const assistantMessage: ChatMessage = {
           id: generateId(),
           role: "assistant",
-          content: `${selectedAltSolution.title} 방법을 선택하셨습니다!\n\n${selectedAltSolution.description}`,
+          content: `${selectedAltSolution.title} \n\n${selectedAltSolution.description}`,
           timestamp: new Date(),
           solution: selectedAltSolution,
           options: [
             {
               id: "view-details",
-              text: "상세 보기",
+              text: t("ai_solutions.solution_detail"),
               action: "none",
             },
             {
               id: "generate-more",
-              text: "다른 방법 추천",
+              text: t("ai_solutions.other_recommendations"),
               action: "generate",
             },
             {
               id: "restart",
-              text: "처음부터 다시",
+              text: t("ai_solutions.restart"),
               action: "restart",
             },
           ],
@@ -417,18 +390,12 @@ const AISolutionsPage = () => {
         if (response.data.data.length > 1) {
           additionalSolutions = response.data.data.slice(1);
         }
-
-        console.log("선택된 주요 솔루션:", solution);
-        console.log("추가 솔루션 옵션:", additionalSolutions);
       } else if (response.data && response.data.data) {
         // 데이터가 단일 객체로 오는 경우
         solution = response.data.data;
-        console.log("선택된 솔루션:", solution);
       } else {
         // 폴백 솔루션 사용
-        console.warn(
-          "API에서 유효한 데이터를 받지 못했습니다. 폴백 솔루션을 사용합니다."
-        );
+
         solution = {
           id: Math.floor(Math.random() * 1000),
           title: `${
@@ -474,17 +441,17 @@ const AISolutionsPage = () => {
       options.push(
         {
           id: "view-details",
-          text: "상세 보기",
+          text: t("ai_solutions.solution_detail"),
           action: "none",
         },
         {
           id: "generate-more",
-          text: "다른 방법 추천",
+          text: t("ai_solutions.other_recommendations"),
           action: "generate",
         },
         {
           id: "restart",
-          text: "처음부터 다시",
+          text: t("ai_solutions.restart"),
           action: "restart",
         }
       );
@@ -493,7 +460,7 @@ const AISolutionsPage = () => {
       const assistantMessage: ChatMessage = {
         id: loadingId, // 로딩 메시지를 교체
         role: "assistant",
-        content: `${solution.title} 방법을 찾았어요!\n\n${solution.description}`,
+        content: `[${solution.title}] \n\n${solution.description}`,
         timestamp: new Date(),
         solution: solution,
         options: options.filter((opt) => opt.id !== "view-details"), // "view-details" 옵션 제외
@@ -507,8 +474,6 @@ const AISolutionsPage = () => {
 
       setConversationState(ConversationState.SOLUTION_READY);
     } catch (error) {
-      console.error("솔루션 생성 오류:", error);
-
       // 오류 메시지 표시
       setMessages((prev) =>
         prev.map((msg) =>
@@ -516,17 +481,16 @@ const AISolutionsPage = () => {
             ? {
                 ...msg,
                 role: "assistant",
-                content:
-                  "죄송합니다. 솔루션을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+                content: t("error.generic_error" + "error.try_again"),
                 options: [
                   {
                     id: "retry",
-                    text: "다시 시도",
+                    text: t("error.try_again"),
                     action: "generate",
                   },
                   {
                     id: "restart",
-                    text: "처음부터 다시",
+                    text: t("ai_solutions.restart"),
                     action: "restart",
                   },
                 ],
@@ -536,7 +500,7 @@ const AISolutionsPage = () => {
       );
 
       toast({
-        title: "솔루션 생성 실패",
+        title: t("error.generic_error"),
         description: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
         variant: "destructive",
         duration: 3000,
@@ -559,13 +523,25 @@ const AISolutionsPage = () => {
     switch (difficulty.toLowerCase()) {
       case "easy":
       case "쉬움":
-        return <Badge className="bg-green-500">쉬움</Badge>;
+        return (
+          <Badge className="bg-green-500">
+            {t("ai_solutions.difficulty_easy")}
+          </Badge>
+        );
       case "medium":
       case "보통":
-        return <Badge className="bg-yellow-500">보통</Badge>;
+        return (
+          <Badge className="bg-yellow-500">
+            {t("ai_solutions.difficulty_medium")}
+          </Badge>
+        );
       case "hard":
       case "어려움":
-        return <Badge className="bg-red-500">어려움</Badge>;
+        return (
+          <Badge className="bg-red-500">
+            {t("ai_solutions.difficulty_hard")}
+          </Badge>
+        );
       default:
         return <Badge className="bg-blue-500">{difficulty}</Badge>;
     }
@@ -577,12 +553,9 @@ const AISolutionsPage = () => {
       <main className="flex-grow pb-16 md:pb-0 container px-4 py-8">
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold text-coffee-dark">
-            AI 업사이클링 솔루션
+            {t("ai_solutions.title")}
           </h1>
-          <p className="text-muted-foreground">
-            커피 찌꺼기의 특성과 원두 종류를 고려한 맞춤형 활용법을 AI가
-            추천해드립니다.
-          </p>
+          <p className="text-muted-foreground">{t("ai_solutions.subtitle")}</p>
         </div>
 
         {/* 메인 컨텐츠 영역 */}
@@ -593,7 +566,7 @@ const AISolutionsPage = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center">
                   <Coffee className="mr-2 h-5 w-5 text-coffee" />
-                  커피 찌꺼기 활용 팁
+                  {t("ai_solutions.usage_tips")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -601,9 +574,11 @@ const AISolutionsPage = () => {
                   <div className="flex items-start gap-2">
                     <Sparkles className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-medium">완전히 말리기</h4>
+                      <h4 className="text-sm font-medium">
+                        {t("ai_solutions.usage_tips")}
+                      </h4>
                       <p className="text-xs text-muted-foreground">
-                        커피 찌꺼기는 습기에 취약하므로 완전히 말려 사용하세요.
+                        {t("ai_solutions.tip_dry_desc")}
                       </p>
                     </div>
                   </div>
@@ -611,9 +586,12 @@ const AISolutionsPage = () => {
                   <div className="flex items-start gap-2">
                     <Leaf className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-medium">밀폐 보관</h4>
+                      <h4 className="text-sm font-medium">
+                        {" "}
+                        {t("ai_solutions.tip_store")}
+                      </h4>
                       <p className="text-xs text-muted-foreground">
-                        밀폐 용기에 넣어 서늘하고 건조한 곳에 보관하세요.
+                        {t("ai_solutions.tip_store_desc")}
                       </p>
                     </div>
                   </div>
@@ -621,10 +599,11 @@ const AISolutionsPage = () => {
                   <div className="flex items-start gap-2">
                     <Recycle className="h-5 w-5 text-coffee shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-medium">원두 종류별 특성</h4>
+                      <h4 className="text-sm font-medium">
+                        {t("ai_solutions.tip_bean")}
+                      </h4>
                       <p className="text-xs text-muted-foreground">
-                        다크 로스팅된 원두는 향이 진하고, 라이트 로스팅은 산미가
-                        살아있어요.
+                        {t("ai_solutions.tip_bean_desc")}
                       </p>
                     </div>
                   </div>
@@ -636,19 +615,13 @@ const AISolutionsPage = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center">
                   <Bot className="mr-2 h-5 w-5 text-coffee" />
-                  AI 추천 방식
+                  {t("ai_solutions.ai_method")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-sm text-muted-foreground space-y-4">
-                  <p>
-                    에코빈의 AI는 커피 찌꺼기의 특성과 원두 종류를 분석하여
-                    최적의 업사이클링 방법을 추천합니다.
-                  </p>
-                  <p>
-                    채팅 창에서 사용 목적과 원두 종류를 입력하면 맞춤형 솔루션을
-                    제공해드려요.
-                  </p>
+                  <p>{t("ai_solutions.ai_method_desc1")}</p>
+                  <p>{t("ai_solutions.ai_method_desc2")}</p>
                 </div>
               </CardContent>
             </Card>
@@ -660,11 +633,10 @@ const AISolutionsPage = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center">
                   <Bot className="mr-2 h-5 w-5 text-eco" />
-                  에코빈 AI 어시스턴트
+                  {t("ai_solutions.ai_assistant")}
                 </CardTitle>
                 <CardDescription>
-                  원하는 용도와 원두 종류를 입력하여 맞춤형 업사이클링 솔루션을
-                  받아보세요.
+                  {t("ai_solutions.ai_assistant_desc")}
                 </CardDescription>
               </CardHeader>
 
@@ -706,7 +678,7 @@ const AISolutionsPage = () => {
                                   AI
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="font-medium">에코빈 AI</span>
+                              <span className="font-medium">Eco-Bean AI</span>
                             </div>
                           )}
 
@@ -722,7 +694,7 @@ const AISolutionsPage = () => {
                                   handleViewSolutionDetails(message.solution!)
                                 }
                               >
-                                상세 보기
+                                {t("ai_solutions.solution_detail")}
                               </Button>
                             </div>
                           )}
@@ -766,11 +738,11 @@ const AISolutionsPage = () => {
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder={
                       conversationState === ConversationState.ASKING_PURPOSE
-                        ? "어떤 용도로 활용하고 싶으신가요? (예: 스크럽, 비료, 방향제...)"
+                        ? t("ai_solutions.chat_purpose")
                         : conversationState ===
                           ConversationState.ASKING_BEAN_TYPE
-                        ? "어떤 원두를 사용하시나요? (상관없으면 '상관없음'이라고 입력하세요)"
-                        : "메시지를 입력하세요..."
+                        ? t("ai_solutions.chat_bean")
+                        : t("ai_solutions.chat_message")
                     }
                     disabled={
                       isGenerating ||
@@ -827,7 +799,9 @@ const AISolutionsPage = () => {
                   </div>
                 </div>
                 <div className="text-sm text-right mb-6">
-                  <span className="font-medium">소요 시간:</span>{" "}
+                  <span className="font-medium">
+                    {t("ai_solutions.duration")}
+                  </span>{" "}
                   {selectedSolution.duration}
                 </div>
               </div>
@@ -835,7 +809,7 @@ const AISolutionsPage = () => {
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium text-coffee-dark mb-2">
-                    필요한 재료
+                    {t("ai_solutions.materials")}
                   </h4>
                   <ul className="space-y-1 list-disc pl-5">
                     {selectedSolution.materials.map((material, index) => (
@@ -850,7 +824,7 @@ const AISolutionsPage = () => {
 
                 <div>
                   <h4 className="font-medium text-coffee-dark mb-2">
-                    만드는 방법
+                    {t("ai_solutions.steps")}
                   </h4>
                   <ol className="space-y-2 pl-5">
                     {selectedSolution.steps.map((step, index) => (
@@ -868,7 +842,7 @@ const AISolutionsPage = () => {
                 className="bg-coffee hover:bg-coffee-dark"
                 onClick={() => setIsDetailOpen(false)}
               >
-                닫기
+                {t("common.close")}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -31,19 +31,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import apiClient from "@/api/apiClient";
-
-// 원두 정보 검증 스키마
-const beanFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "원두 이름은 최소 2자 이상이어야 합니다.",
-  }),
-  origin: z.string().min(2, {
-    message: "원산지는 최소 2자 이상이어야 합니다.",
-  }),
-  description: z.string().max(500, {
-    message: "설명은 최대 500자까지 입력 가능합니다.",
-  }),
-});
+import { useTranslation } from "react-i18next";
 
 // 모의 기존 원두 데이터
 const mockBeans = [
@@ -67,6 +55,20 @@ const CafeBeansPage = () => {
   const { toast } = useToast();
   const [beans, setBeans] = useState([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const { t } = useTranslation();
+
+  // 원두 정보 검증 스키마
+  const beanFormSchema = z.object({
+    name: z.string().min(2, {
+      message: t("beans.validation.name_min"),
+    }),
+    origin: z.string().min(2, {
+      message: t("beans.validation.origin_min"),
+    }),
+    description: z.string().max(500, {
+      message: t("beans.validation.description_max"),
+    }),
+  });
 
   // 폼 초기화
   const form = useForm<z.infer<typeof beanFormSchema>>({
@@ -81,20 +83,15 @@ const CafeBeansPage = () => {
   // 폼 제출 처리
   const onSubmit = async (values: z.infer<typeof beanFormSchema>) => {
     try {
-      console.log(values);
       const response = await apiClient.post("/api/beans", values);
-
-      console.log("[디버깅] 원두 등록 성공 :", response.data);
 
       if (response.data && response.data.data) {
         setBeans((prevBeans) => [...prevBeans, response.data.data]);
       }
     } catch (error: unknown) {
-      console.error("[디버깅] 픽업 리스트 조회 오류:", error);
-
       toast({
-        title: "픽업 리스트 정보 로딩 실패",
-        description: "픽업 리스트 정보를 가져오지 못했습니다",
+        title: t("error.generic_error"),
+        description: t("beans.loading_failure"),
         variant: "destructive",
         duration: 3000,
       });
@@ -103,8 +100,8 @@ const CafeBeansPage = () => {
     form.reset();
 
     toast({
-      title: "원두 등록 완료",
-      description: `${values.name} 원두가 성공적으로 등록되었습니다.`,
+      title: t("beans.register_success"),
+      description: t("beans.register_success_desc", { name: values.name }),
       duration: 3000,
     });
   };
@@ -114,21 +111,18 @@ const CafeBeansPage = () => {
     try {
       const response = await apiClient.delete(`/api/beans/${id}`);
 
-      console.log("[디버깅] 원두 삭제 성공 :", response.data);
       if (response.status == 200) {
         setBeans((prevBeans) => prevBeans.filter((bean) => bean.beanId !== id));
         toast({
-          title: "원두 삭제 완료",
-          description: "선택한 원두가 삭제되었습니다.",
+          title: t("beans.delete_success"),
+          description: t("beans.delete_success_desc"),
           duration: 3000,
         });
       }
     } catch (error: unknown) {
-      console.log("[디버깅] 원두 삭제 오류 :", error);
-
       toast({
-        title: "원두 삭제 실패",
-        description: "선택한 원두 삭제에 실패하였습니다.",
+        title: t("beans.delete_failure"),
+        description: t("beans.delete_failure_desc"),
         duration: 3000,
       });
     }
@@ -140,19 +134,15 @@ const CafeBeansPage = () => {
       try {
         const response = await apiClient.get("/api/beans");
 
-        console.log("[디버깅] 원두 목록 조회 성공 :", response.data);
-
         if (response.data && response.data.data) {
           setBeans(response.data.data);
         }
       } catch (error: unknown) {
-        console.error("[디버깅] 원두 리스트 조회 오류:", error);
-
         setBeans(mockBeans);
 
         toast({
-          title: "원두 리스트 정보 로딩 실패",
-          description: "원두 리스트 정보를 가져오지 못했습니다",
+          title: t("beans.loading_failure_title"),
+          description: t("beans.loading_failure"),
           variant: "destructive",
           duration: 3000,
         });
@@ -163,16 +153,15 @@ const CafeBeansPage = () => {
   }, []);
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-coffee-dark">원두 관리</h2>
+      <h2 className="text-3xl font-bold text-coffee-dark">
+        {t("beans.title")}
+      </h2>
 
       {/* 원두 등록 폼 */}
       <Card>
         <CardHeader>
-          <CardTitle>새 원두 등록</CardTitle>
-          <CardDescription>
-            카페에서 사용하는 원두 정보를 등록해주세요. 등록된 원두 정보는 수거
-            신청 시 함께 제공됩니다.
-          </CardDescription>
+          <CardTitle>{t("beans.register_new")}</CardTitle>
+          <CardDescription>{t("beans.register_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -184,10 +173,10 @@ const CafeBeansPage = () => {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>원두 이름</FormLabel>
+                        <FormLabel>{t("beans.bean_name")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="예: 에티오피아 예가체프"
+                            placeholder={t("beans.name_placeholder")}
                             {...field}
                           />
                         </FormControl>
@@ -201,9 +190,12 @@ const CafeBeansPage = () => {
                     name="origin"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>원산지</FormLabel>
+                        <FormLabel>{t("beans.origin")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: 에티오피아" {...field} />
+                          <Input
+                            placeholder={t("beans.origin_placeholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -217,10 +209,10 @@ const CafeBeansPage = () => {
                     name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>상세 설명</FormLabel>
+                        <FormLabel>{t("beans.description")}</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="원두의 맛과 향, 특징 등을 자세히 설명해주세요."
+                            placeholder={t("beans.description_placeholder")}
                             className="resize-none min-h-[120px]"
                             {...field}
                           />
@@ -235,7 +227,7 @@ const CafeBeansPage = () => {
                 type="submit"
                 className="bg-coffee hover:bg-coffee-dark w-full"
               >
-                원두 등록하기
+                {t("beans.register_button")}
               </Button>
             </form>
           </Form>
@@ -244,7 +236,7 @@ const CafeBeansPage = () => {
 
       {/* 등록된 원두 목록 */}
       <h3 className="text-xl font-semibold text-coffee-dark mt-8">
-        등록된 원두 목록
+        {t("beans.registered_list")}
       </h3>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {beans.map((bean) => (
