@@ -35,7 +35,7 @@ const Header = () => {
             className="bg-eco hover:bg-eco-dark text-white"
           >
             <Sparkles className="mr-2 h-4 w-4" />
-            AI 솔루션
+            AI upcycling guide
           </Button>
           {isAuthenticated ? (
             <>
