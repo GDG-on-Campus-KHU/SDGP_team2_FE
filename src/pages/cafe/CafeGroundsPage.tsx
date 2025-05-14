@@ -34,30 +34,9 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
 
 // 찌꺼기 등록 폼 검증 스키마 (date 필드 제거)
-const groundFormSchema = z.object({
-  amount: z
-    .number({
-      required_error: "양을 입력해주세요.",
-      invalid_type_error: "양은 숫자여야 합니다.",
-    })
-    .min(0.5, {
-      message: "최소 0.5L 이상이어야 합니다.",
-    })
-    .max(100, {
-      message: "최대 100L까지 입력 가능합니다.",
-    }),
-  beanId: z.string({
-    required_error: "원두 종류를 선택해주세요.",
-  }),
-  note: z
-    .string()
-    .max(200, {
-      message: "메모는 최대 200자까지 입력 가능합니다.",
-    })
-    .optional(),
-});
 
 // 원두 타입 정의
 interface Bean {
@@ -79,14 +58,36 @@ interface CoffeeGround {
   cafeId: number;
   beanId: number;
 }
-
 const CafeGroundsPage = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [grounds, setGrounds] = useState<CoffeeGround[]>([]);
   const [beans, setBeans] = useState<Bean[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const groundFormSchema = z.object({
+    amount: z
+      .number({
+        required_error: t("grounds.validation.amount_required"),
+        invalid_type_error: t("grounds.validation.amount_number"),
+      })
+      .min(0.5, {
+        message: t("grounds.validation.amount_min"),
+      })
+      .max(100, {
+        message: t("grounds.validation.amount_max"),
+      }),
+    beanId: z.string({
+      required_error: t("grounds.validation.bean_required"),
+    }),
+    note: z
+      .string()
+      .max(200, {
+        message: t("grounds.validation.note_max"),
+      })
+      .optional(),
+  });
   // 폼 초기화
   const form = useForm<z.infer<typeof groundFormSchema>>({
     resolver: zodResolver(groundFormSchema),
@@ -108,24 +109,14 @@ const CafeGroundsPage = () => {
         let beansData: Bean[] = [];
         try {
           const beansResponse = await apiClient.get("/api/beans");
-          console.log("[디버깅] 원두 목록 조회 성공:", beansResponse.data);
 
           if (beansResponse.data && beansResponse.data.data) {
             beansData = beansResponse.data.data;
-          } else {
-            console.warn(
-              "[디버깅] 원두 목록 응답에 data가 없습니다. 더미 데이터를 사용합니다."
-            );
           }
         } catch (error) {
-          console.error(
-            "[디버깅] 원두 목록 조회 실패. 더미 데이터를 사용합니다:",
-            error
-          );
-
           toast({
-            title: "원두 목록 로딩 실패",
-            description: "더미 데이터를 사용합니다.",
+            title: t("grounds.beans_loading_failure"),
+            description: t("grounds.using_dummy_data"),
             duration: 3000,
           });
         }
@@ -139,24 +130,14 @@ const CafeGroundsPage = () => {
           const groundsResponse = await apiClient.get(
             "/api/cafe/coffee_grounds"
           );
-          console.log("[디버깅] 찌꺼기 목록 조회 성공:", groundsResponse.data);
 
           if (groundsResponse.data && groundsResponse.data.data) {
             groundsData = groundsResponse.data.data;
-          } else {
-            console.warn(
-              "[디버깅] 찌꺼기 목록 응답에 data가 없습니다. 더미 데이터를 사용합니다."
-            );
           }
         } catch (error) {
-          console.error(
-            "[디버깅] 찌꺼기 목록 조회 실패. 더미 데이터를 사용합니다:",
-            error
-          );
-
           toast({
-            title: "찌꺼기 목록 로딩 실패",
-            description: "더미 데이터를 사용합니다.",
+            title: t("grounds.loading_failure"),
+            description: t("grounds.using_dummy_data"),
             duration: 3000,
           });
         }
@@ -164,15 +145,12 @@ const CafeGroundsPage = () => {
         // 찌꺼기 데이터 설정
         setGrounds(groundsData);
       } catch (error: unknown) {
-        console.error("[디버깅] 데이터 조회 중 예상치 못한 오류:", error);
-
-        const errorMessage =
-          "데이터를 가져오는 중 오류가 발생했습니다. 더미 데이터를 사용합니다.";
+        const errorMessage = t("grounds.data_fetch_error");
 
         setError(errorMessage);
 
         toast({
-          title: "데이터 로딩 실패",
+          title: t("error.generic_error"),
           description: errorMessage,
           variant: "destructive",
           duration: 3000,
@@ -192,8 +170,6 @@ const CafeGroundsPage = () => {
 
   // 폼 제출 처리
   const onSubmit = async (values: z.infer<typeof groundFormSchema>) => {
-    console.log("폼 제출 시작:", values);
-
     try {
       // API 요청 데이터 구성
       const groundData = {
@@ -203,8 +179,6 @@ const CafeGroundsPage = () => {
         beanId: parseInt(values.beanId),
       };
 
-      console.log("API 요청 데이터:", groundData);
-
       // API 호출
       let newGround: CoffeeGround;
 
@@ -213,20 +187,14 @@ const CafeGroundsPage = () => {
           "/api/coffee_grounds",
           groundData
         );
-        console.log("[디버깅] 찌꺼기 등록 성공:", response.data);
 
         if (response.data && response.data.data) {
           newGround = response.data.data;
         }
       } catch (error) {
-        console.error(
-          "[디버깅] 찌꺼기 등록 API 실패. 더미 데이터를 생성합니다:",
-          error
-        );
-
         toast({
-          title: "API 연결 실패",
-          description: "API 연결에 실패했지만 더미 데이터로 처리합니다.",
+          title: t("grounds.api_connection_failure"),
+          description: t("grounds.dummy_data_processing"),
           duration: 3000,
         });
       }
@@ -235,8 +203,10 @@ const CafeGroundsPage = () => {
       setGrounds([newGround, ...grounds]);
 
       toast({
-        title: "찌꺼기 등록 완료",
-        description: `${values.amount}L의 찌꺼기가 등록되었습니다.`,
+        title: t("grounds.register_success"),
+        description: t("grounds.register_success_desc", {
+          amount: values.amount,
+        }),
         duration: 3000,
       });
 
@@ -247,11 +217,9 @@ const CafeGroundsPage = () => {
         note: "",
       });
     } catch (error: unknown) {
-      console.error("[디버깅] 찌꺼기 등록 처리 중 예상치 못한 오류:", error);
-
       toast({
-        title: "찌꺼기 등록 실패",
-        description: "찌꺼기를 등록하지 못했습니다.",
+        title: t("grounds.register_failure"),
+        description: t("grounds.register_failure_desc"),
         variant: "destructive",
         duration: 3000,
       });
@@ -262,19 +230,13 @@ const CafeGroundsPage = () => {
   const handleDelete = async (groundId: number) => {
     try {
       await apiClient.delete(`/api/coffee_grounds/${groundId}`);
-      console.log("[디버깅] 찌꺼기 삭제 성공:", groundId);
 
       // 성공 시에도 UI에서 항목 삭제
       setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
     } catch (error) {
-      console.error(
-        "[디버깅] 찌꺼기 삭제 API 실패. 클라이언트에서만 삭제합니다:",
-        error
-      );
-
       toast({
-        title: "API 연결 실패",
-        description: "서버에서 삭제하지 못했지만 화면에서 항목을 제거합니다.",
+        title: t("grounds.api_connection_failure"),
+        description: t("grounds.server_delete_failure"),
         duration: 3000,
       });
 
@@ -282,8 +244,8 @@ const CafeGroundsPage = () => {
       setGrounds(grounds.filter((ground) => ground.groundId !== groundId));
 
       toast({
-        title: "삭제 완료",
-        description: "선택한 찌꺼기 등록이 삭제되었습니다.",
+        title: t("grounds.delete_success"),
+        description: t("grounds.delete_success_desc"),
         duration: 3000,
       });
     }
@@ -307,11 +269,11 @@ const CafeGroundsPage = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "WAITING":
-        return "수거 대기";
+        return t("grounds.status_waiting");
       case "COLLECTED":
-        return "수거 완료";
+        return t("grounds.status_collected");
       case "EXPIRED":
-        return "기간 만료";
+        return t("grounds.status_expired");
       default:
         return status;
     }
@@ -320,7 +282,7 @@ const CafeGroundsPage = () => {
   // 원두 ID로 원두 이름 찾기
   const getBeanNameById = (beanId: number) => {
     const bean = beans.find((bean) => bean.beanId === beanId);
-    return bean ? bean.name : `원두 ID: ${beanId}`;
+    return bean ? bean.name : t("grounds.bean_id", { id: beanId });
   };
 
   // 로딩 중 표시
@@ -328,23 +290,22 @@ const CafeGroundsPage = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader className="h-10 w-10 text-coffee animate-spin" />
-        <span className="ml-2">데이터를 불러오는 중입니다...</span>
+        <span className="ml-2">{t("common.loading")}</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-coffee-dark">찌꺼기 등록</h2>
+      <h2 className="text-3xl font-bold text-coffee-dark">
+        {t("grounds.title")}
+      </h2>
 
       {/* 등록 폼 */}
       <Card>
         <CardHeader>
-          <CardTitle>새 찌꺼기 등록</CardTitle>
-          <CardDescription>
-            오늘 발생한 커피 찌꺼기를 등록해주세요. 등록된 정보는 수거 신청시
-            사용됩니다.
-          </CardDescription>
+          <CardTitle>{t("grounds.register_new")}</CardTitle>
+          <CardDescription>{t("grounds.register_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -356,14 +317,16 @@ const CafeGroundsPage = () => {
                   name="beanId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>원두 종류</FormLabel>
+                      <FormLabel>{t("grounds.bean_type")}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="원두 종류 선택" />
+                            <SelectValue
+                              placeholder={t("grounds.select_bean")}
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -378,14 +341,13 @@ const CafeGroundsPage = () => {
                             ))
                           ) : (
                             <SelectItem value="none" disabled>
-                              등록된 원두가 없습니다
+                              {t("grounds.no_beans")}
                             </SelectItem>
                           )}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        등록하지 않은 원두는 원두 관리 페이지에서 먼저
-                        등록해주세요.
+                        {t("grounds.bean_register_first")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -398,7 +360,7 @@ const CafeGroundsPage = () => {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>찌꺼기 양 (L)</FormLabel>
+                      <FormLabel>{t("grounds.amount")}</FormLabel>
                       <div className="space-y-4">
                         <Slider
                           defaultValue={[field.value]}
@@ -422,12 +384,13 @@ const CafeGroundsPage = () => {
                               max={100}
                             />
                           </FormControl>
-                          <div className="text-coffee-dark">리터 (L)</div>
+                          <div className="text-coffee-dark">
+                            {t("grounds.liter")}
+                          </div>
                         </div>
                       </div>
                       <FormDescription>
-                        일반적으로 에스프레소 한 잔에는 약 20g의 원두가
-                        사용되며, 1L 용량의 찌꺼기는 약 50잔에 해당합니다.
+                        {t("grounds.espresso_info")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -440,17 +403,16 @@ const CafeGroundsPage = () => {
                   name="note"
                   render={({ field }) => (
                     <FormItem className="col-span-2">
-                      <FormLabel>메모 (선택사항)</FormLabel>
+                      <FormLabel>{t("grounds.memo")}</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="특이사항이 있다면 메모해주세요."
+                          placeholder={t("grounds.memo_placeholder")}
                           className="resize-none min-h-[80px]"
                           {...field}
                         />
                       </FormControl>
                       <FormDescription>
-                        찌꺼기의 상태나 보관 정보 등 특이사항을 메모할 수
-                        있습니다.
+                        {t("grounds.memo_desc")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -459,7 +421,7 @@ const CafeGroundsPage = () => {
               </div>
 
               <Button type="submit" className="w-full bg-eco hover:bg-eco-dark">
-                찌꺼기 등록하기
+                {t("grounds.register_button")}
               </Button>
             </form>
           </Form>
@@ -468,7 +430,7 @@ const CafeGroundsPage = () => {
 
       {/* 등록된 찌꺼기 목록 */}
       <h3 className="text-xl font-semibold text-coffee-dark mt-8">
-        등록된 찌꺼기 목록
+        {t("grounds.registered_list")}
       </h3>
       <div className="space-y-4">
         {grounds.length > 0 ? (
@@ -501,20 +463,24 @@ const CafeGroundsPage = () => {
                     </div>
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center">
-                        <span className="text-sm font-medium w-24">원두:</span>
+                        <span className="text-sm font-medium w-24">
+                          {t("grounds.bean")}:
+                        </span>
                         <span className="text-sm text-muted-foreground">
                           {getBeanNameById(ground.beanId)}
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <span className="text-sm font-medium w-24">총량:</span>
+                        <span className="text-sm font-medium w-24">
+                          {t("grounds.total_amount")}:
+                        </span>
                         <span className="text-sm text-muted-foreground">
                           {ground.totalAmount}L
                         </span>
                       </div>
                       <div className="flex items-center">
                         <span className="text-sm font-medium w-24">
-                          남은 양:
+                          {t("grounds.remaining")}:
                         </span>
                         <span className="text-sm text-muted-foreground">
                           {ground.remainingAmount}L
@@ -523,7 +489,7 @@ const CafeGroundsPage = () => {
                       {ground.note && (
                         <div className="flex items-start mt-2">
                           <span className="text-sm font-medium w-24">
-                            메모:
+                            {t("grounds.memo")}:
                           </span>
                           <span className="text-sm text-muted-foreground">
                             {ground.note}
@@ -547,7 +513,7 @@ const CafeGroundsPage = () => {
           ))
         ) : (
           <div className="text-center py-10 text-muted-foreground">
-            <p>등록된 찌꺼기가 없습니다. 새로운 찌꺼기를 등록해주세요.</p>
+            <p>{t("grounds.no_grounds")}</p>
           </div>
         )}
       </div>

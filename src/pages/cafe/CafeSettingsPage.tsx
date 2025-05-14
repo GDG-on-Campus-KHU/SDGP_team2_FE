@@ -33,39 +33,38 @@ import { useForm } from "react-hook-form";
 import { useAuth } from "@/contexts/AuthContext";
 import * as z from "zod";
 import apiClient from "@/api/apiClient";
-
-// 카페 정보 검증 스키마
-const cafeFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "카페 이름은 최소 2자 이상이어야 합니다.",
-  }),
-  address: z.string().min(5, {
-    message: "주소는 최소 5자 이상이어야 합니다.",
-  }),
-  detailAddress: z.string().optional(),
-  phone: z.string().min(10, {
-    message: "연락처는 최소 10자 이상이어야 합니다.",
-  }),
-  openHours: z.string().min(2, {
-    message: "운영 시간을 입력해주세요.",
-  }),
-  description: z
-    .string()
-    .max(500, {
-      message: "설명은 최대 500자까지 입력 가능합니다.",
-    })
-    .optional(),
-  collectSchedule: z.string().min(2, {
-    message: "수거 가능 일정을 입력해주세요.",
-  }),
-});
+import { useTranslation } from "react-i18next";
 
 const CafeSettingsPage = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [cafeId, setCafeId] = useState(2); // Default value, could be set based on user or context
-
+  const cafeFormSchema = z.object({
+    name: z.string().min(2, {
+      message: t("settings.validation.name_min"),
+    }),
+    address: z.string().min(5, {
+      message: t("settings.validation.address_min"),
+    }),
+    detailAddress: z.string().optional(),
+    phone: z.string().min(10, {
+      message: t("settings.validation.phone_min"),
+    }),
+    openHours: z.string().min(2, {
+      message: t("settings.validation.hours_required"),
+    }),
+    description: z
+      .string()
+      .max(500, {
+        message: t("settings.validation.description_max"),
+      })
+      .optional(),
+    collectSchedule: z.string().min(2, {
+      message: t("settings.validation.collection_hours_required"),
+    }),
+  });
   // 폼 초기화
   const form = useForm<z.infer<typeof cafeFormSchema>>({
     resolver: zodResolver(cafeFormSchema),
@@ -106,8 +105,8 @@ const CafeSettingsPage = () => {
         console.error("[디버깅] 카페 정보 조회 오류:", error);
 
         toast({
-          title: "카페 정보 로드 실패",
-          description: "카페 정보를 불러오는데 실패했습니다.",
+          title: t("settings.load_failure"),
+          description: t("settings.load_failure_desc"),
           variant: "destructive",
           duration: 3000,
         });
@@ -126,12 +125,18 @@ const CafeSettingsPage = () => {
 
       const response = await apiClient.put(`/api/cafes`, values);
       console.log("[디버깅] 카페 정보 업데이트 성공:", response.data);
+
+      toast({
+        title: t("settings.save_success"),
+        description: t("settings.save_success_desc"),
+        duration: 3000,
+      });
     } catch (error: unknown) {
       console.error("[디버깅] 카페 정보 업데이트 오류:", error);
 
       toast({
-        title: "설정 저장 실패",
-        description: "카페 정보 저장 중 오류가 발생했습니다.",
+        title: t("settings.save_failure"),
+        description: t("settings.save_failure_desc"),
         variant: "destructive",
         duration: 3000,
       });
@@ -142,22 +147,21 @@ const CafeSettingsPage = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader className="h-10 w-10 text-coffee animate-spin" />
-        <span className="ml-2">카페 정보를 불러오는 중입니다...</span>
+        <span className="ml-2">{t("settings.loading_info")}</span>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-coffee-dark">카페 설정</h2>
+      <h2 className="text-3xl font-bold text-coffee-dark">
+        {t("settings.title")}
+      </h2>
 
       <Card>
         <CardHeader>
-          <CardTitle>카페 정보 관리</CardTitle>
-          <CardDescription>
-            카페의 기본 정보를 설정해주세요. 이 정보는 지도와 수거 신청 화면에
-            표시됩니다.
-          </CardDescription>
+          <CardTitle>{t("settings.manage_info")}</CardTitle>
+          <CardDescription>{t("settings.manage_desc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -165,7 +169,7 @@ const CafeSettingsPage = () => {
               {/* 기본 정보 섹션 */}
               <div>
                 <h3 className="text-lg font-medium text-coffee-dark mb-4">
-                  기본 정보
+                  {t("settings.basic_info")}
                 </h3>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -174,10 +178,12 @@ const CafeSettingsPage = () => {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>카페 이름</FormLabel>
+                        <FormLabel>{t("settings.cafe_name")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="예: 커피 그라운드 카페"
+                            placeholder={t(
+                              "cafe_register.cafe_name_placeholder"
+                            )}
                             {...field}
                           />
                         </FormControl>
@@ -191,9 +197,12 @@ const CafeSettingsPage = () => {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>연락처</FormLabel>
+                        <FormLabel>{t("settings.phone")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: 02-1234-5678" {...field} />
+                          <Input
+                            placeholder={t("cafe_register.phone_placeholder")}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -205,10 +214,10 @@ const CafeSettingsPage = () => {
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>주소</FormLabel>
+                        <FormLabel>{t("settings.address")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="예: 서울시 강남구 테헤란로 101"
+                            placeholder={t("cafe_register.address_placeholder")}
                             {...field}
                           />
                         </FormControl>
@@ -222,9 +231,14 @@ const CafeSettingsPage = () => {
                     name="detailAddress"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>상세 주소</FormLabel>
+                        <FormLabel>{t("settings.detail_address")}</FormLabel>
                         <FormControl>
-                          <Input placeholder="예: 2층 201호" {...field} />
+                          <Input
+                            placeholder={t(
+                              "cafe_register.detail_address_placeholder"
+                            )}
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -236,10 +250,10 @@ const CafeSettingsPage = () => {
                     name="openHours"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>운영 시간</FormLabel>
+                        <FormLabel>{t("settings.hours")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="예: 매일 07:00 - 22:00"
+                            placeholder={t("cafe_register.hours_placeholder")}
                             {...field}
                           />
                         </FormControl>
@@ -253,17 +267,16 @@ const CafeSettingsPage = () => {
                     name="description"
                     render={({ field }) => (
                       <FormItem className="md:col-span-2">
-                        <FormLabel>카페 소개</FormLabel>
+                        <FormLabel>{t("settings.description")}</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="카페에 대한 간략한 소개를 입력해주세요."
+                            placeholder={t("settings.description_placeholder")}
                             className="resize-none min-h-[100px]"
                             {...field}
                           />
                         </FormControl>
                         <FormDescription>
-                          카페의 특징, 사용하는 원두, 지속가능한 활동 등을
-                          소개해주세요.
+                          {t("settings.description_hint")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -277,7 +290,7 @@ const CafeSettingsPage = () => {
               {/* 찌꺼기 수거 설정 */}
               <div>
                 <h3 className="text-lg font-medium text-coffee-dark mb-4">
-                  찌꺼기 수거 설정
+                  {t("settings.collection_settings")}
                 </h3>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -286,15 +299,17 @@ const CafeSettingsPage = () => {
                     name="collectSchedule"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>수거 가능 시간</FormLabel>
+                        <FormLabel>{t("settings.collection_hours")}</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="예: 매일 오전 10시 ~ 12시, 오후 3시 ~ 5시"
+                            placeholder={t(
+                              "cafe_register.collection_hours_placeholder"
+                            )}
                             {...field}
                           />
                         </FormControl>
                         <FormDescription>
-                          찌꺼기 수거가 가능한 시간대를 입력해주세요.
+                          {t("settings.collection_hours_hint")}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
@@ -307,7 +322,7 @@ const CafeSettingsPage = () => {
                 type="submit"
                 className="w-full bg-coffee hover:bg-coffee-dark"
               >
-                설정 저장하기
+                {t("settings.save_settings")}
               </Button>
             </form>
           </Form>

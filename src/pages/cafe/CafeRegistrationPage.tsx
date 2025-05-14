@@ -37,43 +37,43 @@ import * as z from "zod";
 import apiClient from "@/api/apiClient";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
-// Cafe registration validation schema
-const cafeFormSchema = z.object({
-  name: z.string().min(2, {
-    message: "카페 이름은 최소 2자 이상이어야 합니다.",
-  }),
-  address: z.string().min(5, {
-    message: "주소는 최소 5자 이상이어야 합니다.",
-  }),
-  detailAddress: z.string().optional(),
-  phone: z.string().min(10, {
-    message: "연락처는 최소 10자 이상이어야 합니다.",
-  }),
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
-  openHours: z.string().min(2, {
-    message: "운영 시간을 입력해주세요.",
-  }),
-  description: z
-    .string()
-    .max(500, {
-      message: "설명은 최대 500자까지 입력 가능합니다.",
-    })
-    .optional(),
-  collectSchedule: z.string().min(2, {
-    message: "수거 가능 일정을 입력해주세요.",
-  }),
-});
-
-type CafeFormValues = z.infer<typeof cafeFormSchema>;
+import { useTranslation } from "react-i18next";
 
 const CafeRegistrationPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
+  type CafeFormValues = z.infer<typeof cafeFormSchema>;
+
+  const cafeFormSchema = z.object({
+    name: z.string().min(2, {
+      message: t("cafe_register.validation.name_min"),
+    }),
+    address: z.string().min(5, {
+      message: t("cafe_register.validation.address_min"),
+    }),
+    detailAddress: z.string().optional(),
+    phone: z.string().min(10, {
+      message: t("cafe_register.validation.phone_min"),
+    }),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    openHours: z.string().min(2, {
+      message: t("cafe_register.validation.hours_required"),
+    }),
+    description: z
+      .string()
+      .max(500, {
+        message: t("cafe_register.validation.description_max"),
+      })
+      .optional(),
+    collectSchedule: z.string().min(2, {
+      message: t("cafe_register.validation.collection_hours_required"),
+    }),
+  });
   // Initialize the form
   const form = useForm<CafeFormValues>({
     resolver: zodResolver(cafeFormSchema),
@@ -84,9 +84,9 @@ const CafeRegistrationPage = () => {
       phone: "",
       latitude: 0,
       longitude: 0,
-      openHours: "매일 07:00 - 22:00",
+      openHours: t("cafe_register.default_hours"),
       description: "",
-      collectSchedule: "매일 오전 10시 ~ 12시, 오후 3시 ~ 5시",
+      collectSchedule: t("cafe_register.default_collection_hours"),
     },
   });
 
@@ -94,8 +94,8 @@ const CafeRegistrationPage = () => {
   const handleGetLocation = () => {
     if (navigator.geolocation) {
       toast({
-        title: "위치 확인 중",
-        description: "현재 위치를 확인하고 있습니다...",
+        title: t("cafe_register.location_checking"),
+        description: t("cafe_register.location_checking_desc"),
         duration: 3000,
       });
 
@@ -105,25 +105,25 @@ const CafeRegistrationPage = () => {
           form.setValue("longitude", position.coords.longitude);
 
           toast({
-            title: "위치 확인 완료",
-            description: "현재 위치가 저장되었습니다.",
+            title: t("cafe_register.location_success"),
+            description: t("cafe_register.location_success_desc"),
             duration: 3000,
           });
         },
         (error) => {
           toast({
-            title: "위치 확인 실패",
-            description: "위치를 확인할 수 없습니다. 수동으로 입력해주세요.",
+            title: t("cafe_register.location_failure"),
+            description: t("cafe_register.location_failure_desc"),
             variant: "destructive",
             duration: 3000,
           });
-          console.error("위치 가져오기 오류:", error);
+          console.error(t("cafe_register.location_error"), error);
         }
       );
     } else {
       toast({
-        title: "위치 서비스 미지원",
-        description: "브라우저가 위치 서비스를 지원하지 않습니다.",
+        title: t("cafe_register.location_unsupported"),
+        description: t("cafe_register.location_unsupported_desc"),
         variant: "destructive",
         duration: 3000,
       });
@@ -139,7 +139,7 @@ const CafeRegistrationPage = () => {
       // Get the user token
       const token = localStorage.getItem("accessToken");
       if (!token) {
-        throw new Error("인증 토큰이 없습니다. 다시 로그인해주세요.");
+        throw new Error(t("error.no_token"));
       }
       // Make API call
       const response = await apiClient.post("/api/cafes", values);
@@ -147,8 +147,8 @@ const CafeRegistrationPage = () => {
       console.log("[디버깅] 카페 등록 성공:", response.data);
 
       toast({
-        title: "카페 등록 완료",
-        description: "카페 정보가 성공적으로 등록되었습니다.",
+        title: t("cafe_register.register_success"),
+        description: t("cafe_register.register_success_desc"),
         duration: 3000,
       });
 
@@ -158,8 +158,8 @@ const CafeRegistrationPage = () => {
       console.error("[디버깅] 카페 등록 오류:", error);
 
       toast({
-        title: "카페 등록 실패",
-        description: "카페 등록시 오류가 발생했습니다.",
+        title: t("cafe_register.register_failure"),
+        description: t("cafe_register.register_failure_desc"),
         variant: "destructive",
         duration: 3000,
       });
@@ -174,19 +174,18 @@ const CafeRegistrationPage = () => {
       <main className="flex-grow container px-4 py-8">
         <div className="max-w-3xl mx-auto">
           <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-coffee-dark">카페 등록</h1>
+            <h1 className="text-3xl font-bold text-coffee-dark">
+              {t("cafe_register.title")}
+            </h1>
             <p className="text-muted-foreground mt-2">
-              커피 찌꺼기 관리를 위한 카페 정보를 등록해주세요.
+              {t("cafe_register.subtitle")}
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>카페 정보 입력</CardTitle>
-              <CardDescription>
-                정확한 정보를 입력하면 사용자들이 더 쉽게 카페를 찾고 찌꺼기를
-                수거할 수 있습니다.
-              </CardDescription>
+              <CardTitle>{t("cafe_register.info_input")}</CardTitle>
+              <CardDescription>{t("cafe_register.info_desc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -197,7 +196,7 @@ const CafeRegistrationPage = () => {
                   {/* Basic Information Section */}
                   <div>
                     <h3 className="text-lg font-medium text-coffee-dark mb-4">
-                      기본 정보
+                      {t("cafe_register.basic_info")}
                     </h3>
 
                     <div className="grid gap-6 md:grid-cols-2">
@@ -208,10 +207,14 @@ const CafeRegistrationPage = () => {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>카페 이름 *</FormLabel>
+                            <FormLabel>
+                              {t("cafe_register.cafe_name")}
+                            </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="예: 커피 그라운드 카페"
+                                placeholder={t(
+                                  "cafe_register.cafe_name_placeholder"
+                                )}
                                 {...field}
                               />
                             </FormControl>
@@ -225,10 +228,12 @@ const CafeRegistrationPage = () => {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>연락처 *</FormLabel>
+                            <FormLabel>{t("cafe_register.phone")}</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="예: 02-1234-5678"
+                                placeholder={t(
+                                  "cafe_register.phone_placeholder"
+                                )}
                                 {...field}
                               />
                             </FormControl>
@@ -242,10 +247,12 @@ const CafeRegistrationPage = () => {
                         name="address"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>주소 *</FormLabel>
+                            <FormLabel>{t("cafe_register.address")}</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="예: 서울시 강남구 테헤란로 101"
+                                placeholder={t(
+                                  "cafe_register.address_placeholder"
+                                )}
                                 {...field}
                               />
                             </FormControl>
@@ -259,9 +266,16 @@ const CafeRegistrationPage = () => {
                         name="detailAddress"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>상세 주소</FormLabel>
+                            <FormLabel>
+                              {t("cafe_register.detail_address")}
+                            </FormLabel>
                             <FormControl>
-                              <Input placeholder="예: 2층 201호" {...field} />
+                              <Input
+                                placeholder={t(
+                                  "cafe_register.detail_address_placeholder"
+                                )}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -274,12 +288,14 @@ const CafeRegistrationPage = () => {
                           name="latitude"
                           render={({ field: { value, onChange, ...rest } }) => (
                             <FormItem className="flex-1">
-                              <FormLabel>위도</FormLabel>
+                              <FormLabel>
+                                {t("cafe_register.latitude")}
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
                                   step="any"
-                                  placeholder="위도"
+                                  placeholder={t("cafe_register.latitude")}
                                   value={value || ""}
                                   onChange={(e) =>
                                     onChange(
@@ -301,12 +317,14 @@ const CafeRegistrationPage = () => {
                           name="longitude"
                           render={({ field: { value, onChange, ...rest } }) => (
                             <FormItem className="flex-1">
-                              <FormLabel>경도</FormLabel>
+                              <FormLabel>
+                                {t("cafe_register.longitude")}
+                              </FormLabel>
                               <FormControl>
                                 <Input
                                   type="number"
                                   step="any"
-                                  placeholder="경도"
+                                  placeholder={t("cafe_register.longitude")}
                                   value={value || ""}
                                   onChange={(e) =>
                                     onChange(
@@ -329,7 +347,7 @@ const CafeRegistrationPage = () => {
                           className="border-coffee text-coffee hover:bg-coffee-cream/50 mb-[2px]"
                           onClick={handleGetLocation}
                         >
-                          현재 위치 가져오기
+                          {t("cafe_register.get_current_location")}
                         </Button>
                       </div>
 
@@ -338,10 +356,12 @@ const CafeRegistrationPage = () => {
                         name="openHours"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>운영 시간 *</FormLabel>
+                            <FormLabel>{t("cafe_register.hours")}</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="예: 매일 07:00 - 22:00"
+                                placeholder={t(
+                                  "cafe_register.hours_placeholder"
+                                )}
                                 {...field}
                               />
                             </FormControl>
@@ -355,17 +375,20 @@ const CafeRegistrationPage = () => {
                         name="description"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel>카페 소개</FormLabel>
+                            <FormLabel>
+                              {t("cafe_register.description")}
+                            </FormLabel>
                             <FormControl>
                               <Textarea
-                                placeholder="카페에 대한 간략한 소개를 입력해주세요."
+                                placeholder={t(
+                                  "cafe_register.description_placeholder"
+                                )}
                                 className="resize-none min-h-[100px]"
                                 {...field}
                               />
                             </FormControl>
                             <FormDescription>
-                              카페의 특징, 사용하는 원두, 지속가능한 활동 등을
-                              소개해주세요.
+                              {t("cafe_register.description_hint")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -379,7 +402,7 @@ const CafeRegistrationPage = () => {
                   {/* Coffee Grounds Collection Settings */}
                   <div>
                     <h3 className="text-lg font-medium text-coffee-dark mb-4">
-                      찌꺼기 수거 설정
+                      {t("cafe_register.collection_settings")}
                     </h3>
 
                     <div className="grid gap-6 md:grid-cols-2">
@@ -388,15 +411,19 @@ const CafeRegistrationPage = () => {
                         name="collectSchedule"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel>수거 가능 시간 *</FormLabel>
+                            <FormLabel>
+                              {t("cafe_register.collection_hours")}
+                            </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="예: 매일 오전 10시 ~ 12시, 오후 3시 ~ 5시"
+                                placeholder={t(
+                                  "cafe_register.collection_hours_placeholder"
+                                )}
                                 {...field}
                               />
                             </FormControl>
                             <FormDescription>
-                              찌꺼기 수거가 가능한 시간대를 입력해주세요.
+                              {t("cafe_register.collection_hours_hint")}
                             </FormDescription>
                             <FormMessage />
                           </FormItem>
@@ -411,7 +438,9 @@ const CafeRegistrationPage = () => {
                       className="w-full bg-coffee hover:bg-coffee-dark"
                       disabled={isLoading}
                     >
-                      {isLoading ? "등록 중..." : "카페 등록하기"}
+                      {isLoading
+                        ? t("cafe_register.registering")
+                        : t("cafe_register.register_button")}
                     </Button>
                   </div>
                 </form>

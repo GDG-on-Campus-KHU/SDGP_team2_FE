@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/api/apiClient";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 
 // 카페 정보 타입 정의
 interface CafeInfo {
@@ -55,6 +56,7 @@ const CafeDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // 상태 관리
   const [loading, setLoading] = useState<boolean>(true);
@@ -82,13 +84,13 @@ const CafeDashboard = () => {
   const getStatusText = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "대기";
+        return t("mypage.pending");
       case "ACCEPTED":
-        return "수락";
+        return t("mypage.accepted");
       case "COMPLETED":
-        return "완료";
+        return t("mypage.completed");
       case "REJECTED":
-        return "거절";
+        return t("mypage.rejected");
       default:
         return status;
     }
@@ -103,19 +105,15 @@ const CafeDashboard = () => {
       try {
         const response = await apiClient.get(`/api/cafes/me`);
 
-        console.log("[디버깅] 카페 정보 가져오기 성공:", response.data);
-
         if (response.data && response.data.data) {
           setCafeInfo(response.data.data);
         } else {
-          setError("카페 정보를 가져오는데 실패했습니다.");
+          setError(t("cafe.info_fetch_error"));
         }
       } catch (error: unknown) {
-        console.error("[디버깅] 카페 정보 가져오기 오류:", error);
-
         toast({
-          title: "카페 정보 로딩 실패",
-          description: "카페 정보를 가져오는 중 오류가 발생했습니다.",
+          title: t("cafe.info_loading_failure"),
+          description: t("cafe.info_loading_failure_desc"),
           variant: "destructive",
           duration: 3000,
         });
@@ -138,8 +136,8 @@ const CafeDashboard = () => {
         console.error("[디버깅] 픽업 리스트 조회 오류:", error);
 
         toast({
-          title: "픽업 리스트 정보 로딩 실패",
-          description: "픽업 리스트 정보를 가져오지 못했습니다",
+          title: t("cafe.pickup_list_loading_failure"),
+          description: t("cafe.pickup_list_loading_failure_desc"),
           variant: "destructive",
           duration: 3000,
         });
@@ -155,7 +153,7 @@ const CafeDashboard = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader className="h-10 w-10 text-coffee animate-spin" />
-        <span className="ml-2">카페 정보를 불러오는 중입니다...</span>
+        <span className="ml-2">{t("cafe.loading_info")}</span>
       </div>
     );
   }
@@ -169,7 +167,7 @@ const CafeDashboard = () => {
           onClick={() => navigate("/cafe/settings")}
           className="bg-coffee hover:bg-coffee-dark"
         >
-          카페 정보 설정하기
+          {t("cafe.setup_info")}
         </Button>
       </div>
     );
@@ -181,7 +179,9 @@ const CafeDashboard = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-bold text-coffee-dark">카페 대시보드</h2>
+        <h2 className="text-3xl font-bold text-coffee-dark">
+          {t("cafe.dashboard")}
+        </h2>
       </div>
 
       {/* 요약 카드 영역
@@ -237,15 +237,17 @@ const CafeDashboard = () => {
       {/* 카페 정보 카드 */}
       <Card>
         <CardHeader>
-          <CardTitle>내 카페 정보</CardTitle>
-          <CardDescription>등록된 카페 기본 정보입니다</CardDescription>
+          <CardTitle>{t("cafe.cafe_info")}</CardTitle>
+          <CardDescription>{t("cafe.cafe_info_desc")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               <Building2 className="h-5 w-5 text-coffee" />
               <div>
-                <p className="text-sm font-medium leading-none">카페명</p>
+                <p className="text-sm font-medium leading-none">
+                  {t("cafe.cafe_name")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {cafeInfo?.name || "-"}
                 </p>
@@ -254,7 +256,9 @@ const CafeDashboard = () => {
             <div className="flex items-center space-x-3">
               <MapPin className="h-5 w-5 text-coffee" />
               <div>
-                <p className="text-sm font-medium leading-none">주소</p>
+                <p className="text-sm font-medium leading-none">
+                  {t("cafe.address")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {cafeInfo?.address || "-"}{" "}
                   {cafeInfo?.detailAddress ? `(${cafeInfo.detailAddress})` : ""}
@@ -264,7 +268,9 @@ const CafeDashboard = () => {
             <div className="flex items-center space-x-3">
               <Phone className="h-5 w-5 text-coffee" />
               <div>
-                <p className="text-sm font-medium leading-none">연락처</p>
+                <p className="text-sm font-medium leading-none">
+                  {t("cafe.phone")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {cafeInfo?.phone || "-"}
                 </p>
@@ -276,7 +282,9 @@ const CafeDashboard = () => {
             <div className="flex items-center space-x-3">
               <Coffee className="h-5 w-5 text-coffee" />
               <div>
-                <p className="text-sm font-medium leading-none">대표 원두</p>
+                <p className="text-sm font-medium leading-none">
+                  {t("cafe.primary_bean")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   에티오피아 예가체프
                 </p>
@@ -285,7 +293,9 @@ const CafeDashboard = () => {
             <div className="flex items-center space-x-3">
               <Calendar className="h-5 w-5 text-coffee" />
               <div>
-                <p className="text-sm font-medium leading-none">운영 시간</p>
+                <p className="text-sm font-medium leading-none">
+                  {t("cafe.hours")}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {cafeInfo?.openHours || "-"}
                 </p>
@@ -299,10 +309,8 @@ const CafeDashboard = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>최근 수거 요청</CardTitle>
-            <CardDescription>
-              최근에 들어온 수거 요청 내역입니다
-            </CardDescription>
+            <CardTitle>{t("cafe.recent_requests")}</CardTitle>
+            <CardDescription>{t("cafe.recent_requests_desc")}</CardDescription>
           </div>
           <Button
             variant="outline"
@@ -310,7 +318,7 @@ const CafeDashboard = () => {
             onClick={() => navigate("/cafe/requests")}
             className="border-coffee text-coffee hover:bg-coffee-cream/50"
           >
-            모든 요청 보기
+            {t("cafe.view_all_requests")}
           </Button>
         </CardHeader>
         <CardContent>
@@ -347,7 +355,7 @@ const CafeDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-6 text-muted-foreground">
-              <p>최근 수거 요청이 없습니다.</p>
+              <p>{t("cafe.no_recent_requests")}</p>
             </div>
           )}
         </CardContent>

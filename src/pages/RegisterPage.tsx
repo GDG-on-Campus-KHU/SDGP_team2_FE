@@ -26,6 +26,7 @@ import axios from "axios";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Upload, Camera, X } from "lucide-react";
 import apiClient from "@/api/apiClient";
+import { useTranslation } from "react-i18next";
 
 // 프로필 이미지 업로드 컴포넌트
 const ProfileImageUpload = ({ username, profileImage, onChange }) => {
@@ -33,6 +34,7 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
   const defaultAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${
     username || "user"
   }`;
+  const { t } = useTranslation();
 
   // 상태 관리
   const [avatar, setAvatar] = useState(profileImage || defaultAvatar);
@@ -48,13 +50,13 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
 
     // 파일 크기 제한 (2MB)
     if (file.size > 2 * 1024 * 1024) {
-      alert("이미지 크기는 2MB 이하여야 합니다.");
+      alert(t("auth.image_size_limit"));
       return;
     }
 
     // 파일 타입 검증
     if (!file.type.startsWith("image/")) {
-      alert("이미지 파일만 업로드 가능합니다.");
+      alert(t("auth.image_size_limit"));
       return;
     }
 
@@ -85,7 +87,7 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
         htmlFor="profile-image"
         className="text-sm font-medium text-center mb-1"
       >
-        프로필 이미지
+        {t("auth.profile_image")}
       </Label>
 
       <div
@@ -94,7 +96,7 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
         onMouseLeave={() => setIsHovering(false)}
       >
         <Avatar className="h-24 w-24 border-2 border-coffee/30 cursor-pointer">
-          <AvatarImage src={avatar} alt="프로필 이미지" />
+          <AvatarImage src={avatar} alt="profile_image" />
           <AvatarFallback className="bg-coffee-cream text-coffee">
             <User size={32} />
           </AvatarFallback>
@@ -144,11 +146,11 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
         onClick={triggerFileInput}
       >
         <Upload className="mr-1 h-3.5 w-3.5" />
-        이미지 업로드
+        {t("auth.upload_image")}
       </Button>
 
       <p className="text-xs text-muted-foreground">
-        JPG, PNG, GIF 파일 (최대 2MB)
+        {t("auth.image_size_limit")}
       </p>
     </div>
   );
@@ -158,6 +160,7 @@ const ProfileImageUpload = ({ username, profileImage, onChange }) => {
 const RegisterPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -178,7 +181,6 @@ const RegisterPage = () => {
   });
 
   const validateForm = () => {
-    console.log("[디버깅] 폼 유효성 검사 시작...");
     let valid = true;
     const newErrors = {
       username: "",
@@ -188,73 +190,58 @@ const RegisterPage = () => {
     };
 
     if (!username.trim()) {
-      newErrors.username = "사용자 이름을 입력해주세요.";
+      newErrors.username = t("auth.enter_username");
       valid = false;
-      console.warn("[디버깅] 사용자 이름이 비어 있습니다.");
     }
 
     if (!email.trim()) {
-      newErrors.email = "이메일을 입력해주세요.";
+      newErrors.email = t("auth.enter_email");
       valid = false;
-      console.warn("[디버깅] 이메일이 비어 있습니다.");
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "유효한 이메일 주소를 입력해주세요.";
+      newErrors.email = "enter valid email";
       valid = false;
-      console.warn("[디버깅] 이메일 형식이 올바르지 않습니다:", email);
     }
 
     if (!password) {
-      newErrors.password = "비밀번호를 입력해주세요.";
+      newErrors.password = t("auth.enter_password");
       valid = false;
-      console.warn("[디버깅] 비밀번호가 비어 있습니다.");
     } else if (password.length < 6) {
-      newErrors.password = "비밀번호는 최소 6자 이상이어야 합니다.";
+      newErrors.password = "The password must be at least 6 characters long.";
       valid = false;
-      console.warn("[디버깅] 비밀번호가 너무 짧습니다:", password.length);
     }
 
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = "비밀번호가 일치하지 않습니다.";
+      newErrors.confirmPassword = "wrong confirm password";
       valid = false;
-      console.warn("[디버깅] 비밀번호 확인이 일치하지 않습니다.");
     }
 
     if (!termsAccepted || !privacyAccepted) {
-      toast({
-        title: "약관 동의 필요",
-        description: "서비스 이용을 위해 모든 약관에 동의해주세요.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "약관 동의 필요",
+      //   description: "서비스 이용을 위해 모든 약관에 동의해주세요.",
+      //   variant: "destructive",
+      // });
       valid = false;
-      console.warn("[디버깅] 약관 동의가 누락되었습니다:", {
-        termsAccepted,
-        privacyAccepted,
-      });
     }
 
     setErrors(newErrors);
-    console.log("[디버깅] 폼 유효성 검사 결과:", { valid, errors: newErrors });
+
     return valid;
   };
 
   // 프로필 이미지가 변경될 때 호출되는 핸들러
   const handleProfileImageChange = (imageData) => {
     setProfileImage(imageData);
-    console.log("[디버깅] 프로필 이미지 변경됨");
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    console.log("\n[디버깅] ===== 회원가입 시도 시작 =====");
-    console.log("[디버깅] 시간:", new Date().toISOString());
 
     if (!validateForm()) {
-      console.warn("[디버깅] 폼 유효성 검사 실패로 회원가입 중단");
       return;
     }
 
     setIsLoading(true);
-    console.log("[디버깅] 로딩 상태 설정: true");
 
     // role 값이 'USER' 또는 'CAFE'인지 확인
     const role = userType === "USER" ? "USER" : "CAFE";
@@ -272,106 +259,59 @@ const RegisterPage = () => {
       profileImage: finalProfileImage,
     };
 
-    console.log("[디버깅] 회원가입 요청 데이터:", {
-      ...registerData,
-      password: "********",
-      profileImage: profileImage ? "(사용자 지정 이미지)" : "(기본 아바타)",
-    });
-
     try {
-      console.log("[디버깅] 회원가입 API 요청 시작...");
-      console.log("[디버깅] 요청 URL: /api/auth/register");
-      console.log("[디버깅] 요청 메서드: POST");
-
       const startTime = new Date().getTime();
 
-      const response = await apiClient.post(
-        "api/auth/register", registerData,
-      );
+      const response = await apiClient.post("api/auth/register", registerData);
 
       const endTime = new Date().getTime();
-      console.log(`[디버깅] API 응답 시간: ${endTime - startTime}ms`);
-
-      console.log("[디버깅] 회원가입 API 응답 성공:", {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data,
-      });
 
       if (response.status === 201 || response.status === 200) {
         toast({
-          title: "회원가입 성공",
+          title: t("auth.register_success"),
           description:
-            "회원가입이 성공적으로 완료되었습니다. 로그인 페이지로 이동합니다.",
+            "Sign-up completed successfully. Redirecting to the login page.",
           duration: 3000,
         });
 
-        console.log("[디버깅] 회원가입 성공, 로그인 페이지로 이동");
         navigate("/login");
       }
     } catch (error) {
-      console.error("\n[디버깅] ===== 회원가입 API 요청 실패 =====");
-      console.error("[디버깅] 시간:", new Date().toISOString());
-
-      let errorMessage = "회원가입 중 오류가 발생했습니다.";
-      let errorDetail = "";
-
-      if (error.response) {
-        const statusCode = error.response.status;
-
-        console.error("[디버깅] 응답 상태 코드:", statusCode);
-        console.error("[디버깅] 응답 헤더:", error.response.headers);
-        console.error("[디버깅] 응답 데이터:", error.response.data);
-
-        errorDetail = `상태 코드: ${statusCode}`;
-
-        if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-          errorDetail += `, 메시지: ${errorMessage}`;
-        } else if (statusCode === 409) {
-          errorMessage = "이미 사용 중인 사용자 이름이나 이메일입니다.";
-          errorDetail += `, 추정 오류: 중복된 사용자 정보`;
-        } else if (statusCode === 400) {
-          errorMessage =
-            "입력값이 유효하지 않습니다. 입력 내용을 확인해주세요.";
-          errorDetail += `, 추정 오류: 잘못된 입력값`;
-        } else if (statusCode === 500) {
-          errorMessage =
-            "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-          errorDetail += `, 추정 오류: 서버 내부 오류`;
-        }
-      } else if (error.request) {
-        console.error("[디버깅] 요청 정보:", error.request);
-        console.error(
-          "[디버깅] 요청은 전송되었으나 응답이 없음 (네트워크 문제 또는 서버 다운)"
-        );
-
-        errorMessage =
-          "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
-        errorDetail = "응답 없음, 네트워크 문제 또는 서버 다운";
-      } else {
-        console.error("[디버깅] 오류 메시지:", error.message);
-        errorDetail = `오류 메시지: ${error.message}`;
-      }
-
-      toast({
-        title: "회원가입 실패",
-        description: errorMessage,
-        variant: "destructive",
-        duration: 3000,
-      });
-
-      console.error("\n[디버깅] ========== 회원가입 실패 요약 ==========");
-      console.error("[디버깅] 시간:", new Date().toISOString());
-      console.error("[디버깅] 오류 메시지:", errorMessage);
-      console.error("[디버깅] 오류 상세:", errorDetail);
-      console.error("[디버깅] 입력한 사용자 이름:", username);
-      console.error("[디버깅] 입력한 이메일:", email);
-      console.error("[디버깅] =========================================\n");
+      // let errorMessage = "회원가입 중 오류가 발생했습니다.";
+      // let errorDetail = "";
+      // if (error.response) {
+      //   const statusCode = error.response.status;
+      //   errorDetail = `상태 코드: ${statusCode}`;
+      //   if (error.response.data?.message) {
+      //     errorMessage = error.response.data.message;
+      //     errorDetail += `, 메시지: ${errorMessage}`;
+      //   } else if (statusCode === 409) {
+      //     errorMessage = "이미 사용 중인 사용자 이름이나 이메일입니다.";
+      //     errorDetail += `, 추정 오류: 중복된 사용자 정보`;
+      //   } else if (statusCode === 400) {
+      //     errorMessage =
+      //       "입력값이 유효하지 않습니다. 입력 내용을 확인해주세요.";
+      //     errorDetail += `, 추정 오류: 잘못된 입력값`;
+      //   } else if (statusCode === 500) {
+      //     errorMessage =
+      //       "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+      //     errorDetail += `, 추정 오류: 서버 내부 오류`;
+      //   }
+      // } else if (error.request) {
+      //   errorMessage =
+      //     "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
+      //   errorDetail = "응답 없음, 네트워크 문제 또는 서버 다운";
+      // } else {
+      //   errorDetail = `오류 메시지: ${error.message}`;
+      // }
+      // toast({
+      //   title: "회원가입 실패",
+      //   description: errorMessage,
+      //   variant: "destructive",
+      //   duration: 3000,
+      // });
     } finally {
       setIsLoading(false);
-      console.log("[디버깅] 로딩 상태 설정: false");
-      console.log("[디버깅] ===== 회원가입 시도 종료 =====\n");
     }
   };
 
@@ -382,11 +322,9 @@ const RegisterPage = () => {
         <Card className="w-full max-w-md animate-fade-in">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold text-coffee-dark">
-              회원가입
+              {t("common.register")}
             </CardTitle>
-            <CardDescription>
-              에코빈 서비스 이용을 위한 계정을 생성해주세요
-            </CardDescription>
+            <CardDescription></CardDescription>
           </CardHeader>
           <form onSubmit={handleRegister}>
             <CardContent className="space-y-4">
@@ -400,10 +338,10 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="username">사용자 이름</Label>
+                <Label htmlFor="username"> {t("auth.username")}</Label>
                 <Input
                   id="username"
-                  placeholder="사용자 이름을 입력하세요"
+                  placeholder={t("auth.enter_username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -414,11 +352,11 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">이메일</Label>
+                <Label htmlFor="email">email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="이메일을 입력하세요"
+                  placeholder={t("auth.enter_email")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -429,11 +367,11 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">비밀번호</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="비밀번호를 입력하세요"
+                  placeholder={t("auth.enter_password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -444,11 +382,13 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">비밀번호 확인</Label>
+                <Label htmlFor="confirmPassword">
+                  {t("auth.confirm_password")}
+                </Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="비밀번호를 다시 입력하세요"
+                  placeholder={t("auth.enter_password")}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -461,14 +401,16 @@ const RegisterPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="userType">사용자 유형</Label>
+                <Label htmlFor="userType">{t("auth.user_type")}</Label>
                 <Select value={userType} onValueChange={setUserType}>
                   <SelectTrigger>
-                    <SelectValue placeholder="사용자 유형 선택" />
+                    <SelectValue placeholder="enter user type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USER">일반 사용자</SelectItem>
-                    <SelectItem value="CAFE">카페 운영자</SelectItem>
+                    <SelectItem value="USER">
+                      {t("auth.regular_user")}
+                    </SelectItem>
+                    <SelectItem value="CAFE">{t("auth.cafe_owner")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -483,14 +425,7 @@ const RegisterPage = () => {
                     }
                   />
                   <Label htmlFor="terms" className="text-sm">
-                    <span>이용약관에 동의합니다.</span>{" "}
-                    <Link
-                      to="/terms"
-                      className="text-coffee hover:underline"
-                      target="_blank"
-                    >
-                      보기
-                    </Link>
+                    <span>{t("auth.terms_agree")}</span>
                   </Label>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -502,14 +437,7 @@ const RegisterPage = () => {
                     }
                   />
                   <Label htmlFor="privacy" className="text-sm">
-                    <span>개인정보 처리방침에 동의합니다.</span>{" "}
-                    <Link
-                      to="/privacy"
-                      className="text-coffee hover:underline"
-                      target="_blank"
-                    >
-                      보기
-                    </Link>
+                    <span>{t("auth.privacy_agree")}</span>
                   </Label>
                 </div>
               </div>
@@ -520,15 +448,15 @@ const RegisterPage = () => {
                 className="w-full bg-coffee hover:bg-coffee-dark"
                 disabled={isLoading}
               >
-                {isLoading ? "처리 중..." : "가입하기"}
+                {isLoading ? t("common.loading") : t("common.register")}
               </Button>
             </CardFooter>
           </form>
           <CardFooter className="flex justify-center pt-0">
             <p className="text-sm text-muted-foreground">
-              이미 계정이 있으신가요?{" "}
+              {t("auth.have_account")}
               <Link to="/login" className="text-coffee hover:underline">
-                로그인
+                {t("common.login")}
               </Link>
             </p>
           </CardFooter>

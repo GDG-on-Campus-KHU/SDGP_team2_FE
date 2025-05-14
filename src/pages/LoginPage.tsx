@@ -1,3 +1,4 @@
+// src/pages/LoginPage.tsx (Modified with i18n)
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/api/apiClient";
-
-// API 기본 URL 정의
-const API_BASE_URL = "http://34.64.59.141:8080";
-// 기존 : https://34.64.59.141.nip.io
+import { useTranslation } from "react-i18next";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -30,6 +28,7 @@ const LoginPage = () => {
   const { login } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGoogleLogin = async () => {
     try {
@@ -39,19 +38,15 @@ const LoginPage = () => {
       const redirectUri = `${window.location.origin}/oauth/google/callback`;
 
       // URL 파라미터에 리다이렉트 URI 추가
-      const authUrl = `${API_BASE_URL}/api/auth/login/google?redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}`;
+      const authUrl = `${
+        import.meta.env.VITE_API_BASE_URL
+      }/api/auth/login/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-      console.log("[디버깅] 구글 로그인 URL:", authUrl);
       window.location.href = authUrl;
     } catch (error: any) {
-      console.error("[디버깅] Google 로그인 초기화 오류:", error);
-
       toast({
-        title: "Google 로그인 오류",
-        description:
-          "Google 로그인을 시작하는 중 오류가 발생했습니다. 일반 로그인을 시도해주세요.",
+        title: t("auth.login_failure"),
+        description: t("auth.login_failure"),
         variant: "destructive",
         duration: 3000,
       });
@@ -60,34 +55,20 @@ const LoginPage = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("\n[디버깅] ===== 로그인 시도 시작 =====");
-    console.log("[디버깅] 시간:", new Date().toISOString());
 
     // 입력값 검증
     if (!username.trim() || !password) {
       toast({
-        title: "로그인 실패",
+        title: t("auth.login_failure"),
         description: "사용자 이름과 비밀번호를 모두 입력해주세요.",
         variant: "destructive",
       });
-      console.warn(
-        "[디버깅] 폼 유효성 검사 실패: 사용자 이름 또는 비밀번호 누락"
-      );
+
       return;
     }
 
     setIsLoading(true);
-    console.log("[디버깅] 로딩 상태 설정: true");
-
     try {
-      console.log("[디버깅] 로그인 API 요청 시작...");
-      console.log("[디버깅] 요청 URL: /api/auth/login");
-      console.log("[디버깅] 요청 메서드: POST");
-      console.log("[디버깅] 요청 데이터:", {
-        username: username.trim(),
-        password: "********",
-      });
-
       // 요청 시작 전 타임스탬프
       const startTime = new Date().getTime();
 
@@ -99,25 +80,6 @@ const LoginPage = () => {
 
       // 요청 완료 후 타임스탬프
       const endTime = new Date().getTime();
-      console.log(`[디버깅] API 응답 시간: ${endTime - startTime}ms`);
-
-      console.log("[디버깅] 로그인 API 응답 성공:", {
-        status: response.status,
-        statusText: response.statusText,
-        // 토큰 정보는 보안을 위해 마스킹
-        data: response.data
-          ? {
-              ...response.data,
-              data: response.data.data
-                ? {
-                    ...response.data.data,
-                    accessToken: "****",
-                    refreshToken: "****",
-                  }
-                : null,
-            }
-          : null,
-      });
 
       if (response.data && response.data.data) {
         const userData = response.data.data;
@@ -138,36 +100,29 @@ const LoginPage = () => {
         localStorage.setItem("refreshToken", userData.refreshToken);
 
         toast({
-          title: "로그인 성공",
+          title: t("auth.login_success"),
           description: `${
-            userData.role === "USER" ? "일반 사용자" : "카페 운영자"
-          }로 로그인되었습니다.`,
+            userData.role === "USER"
+              ? t("auth.regular_user")
+              : t("auth.cafe_owner")
+          } ${t("auth.login_success")}`,
           duration: 3000,
         });
 
         // 사용자 유형에 따른 리디렉션
         if (userData.role === "USER") {
-          console.log("[디버깅] 일반 사용자로 로그인 성공, 메인 페이지로 이동");
           navigate("/");
         } else {
-          console.log("[디버깅] 카페 운영자로 로그인 성공, 대시보드로 이동");
           navigate("/cafe/dashboard");
         }
       }
     } catch (error: any) {
-      console.error("\n[디버깅] ===== 로그인 API 요청 실패 =====");
-      console.error("[디버깅] 시간:", new Date().toISOString());
-
-      let errorMessage = "로그인 중 오류가 발생했습니다.";
+      let errorMessage = t("auth.login_failure");
       let errorDetail = "";
 
       if (error.response) {
         // 서버가 응답을 반환한 경우
         const statusCode = error.response.status;
-
-        console.error("[디버깅] 응답 상태 코드:", statusCode);
-        console.error("[디버깅] 응답 헤더:", error.response.headers);
-        console.error("[디버깅] 응답 데이터:", error.response.data);
 
         errorDetail = `상태 코드: ${statusCode}`;
 
@@ -187,38 +142,24 @@ const LoginPage = () => {
         }
       } else if (error.request) {
         // 요청은 보냈지만 응답을 받지 못한 경우
-        console.error("[디버깅] 요청 정보:", error.request);
-        console.error(
-          "[디버깅] 요청은 전송되었으나 응답이 없음 (네트워크 문제 또는 서버 다운)"
-        );
 
         errorMessage =
           "서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.";
         errorDetail = "응답 없음, 네트워크 문제 또는 서버 다운";
       } else {
         // 요청 설정 중 오류가 발생한 경우
-        console.error("[디버깅] 오류 메시지:", error.message);
+
         errorDetail = `오류 메시지: ${error.message}`;
       }
 
       toast({
-        title: "로그인 실패",
+        title: t("auth.login_failure"),
         description: errorMessage,
         variant: "destructive",
         duration: 3000,
       });
-
-      // 터미널에 명확한 오류 메시지 출력
-      console.error("\n[디버깅] ========== 로그인 실패 요약 ==========");
-      console.error("[디버깅] 시간:", new Date().toISOString());
-      console.error("[디버깅] 오류 메시지:", errorMessage);
-      console.error("[디버깅] 오류 상세:", errorDetail);
-      console.error("[디버깅] 입력한 사용자 이름:", username);
-      console.error("[디버깅] =========================================\n");
     } finally {
       setIsLoading(false);
-      console.log("[디버깅] 로딩 상태 설정: false");
-      console.log("[디버깅] ===== 로그인 시도 종료 =====\n");
     }
   };
 
@@ -229,28 +170,28 @@ const LoginPage = () => {
         <Card className="w-full max-w-md animate-fade-in">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold text-coffee-dark">
-              로그인
+              {t("common.login")}
             </CardTitle>
-            <CardDescription>계정 정보를 입력하여 로그인하세요</CardDescription>
+            <CardDescription>{t("auth.enter_username")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">사용자 이름</Label>
+                <Label htmlFor="username">{t("auth.username")}</Label>
                 <Input
                   id="username"
-                  placeholder="사용자 이름을 입력하세요"
+                  placeholder={t("auth.enter_username")}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">비밀번호</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="비밀번호를 입력하세요"
+                  placeholder={t("auth.enter_password")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -261,13 +202,15 @@ const LoginPage = () => {
                 className="w-full bg-coffee hover:bg-coffee-dark"
                 disabled={isLoading}
               >
-                {isLoading ? "로그인 중..." : "로그인"}
+                {isLoading ? t("common.loading") : t("common.login")}
               </Button>
             </form>
 
             <div className="relative flex items-center py-2">
               <div className="flex-grow border-t border-gray-300"></div>
-              <span className="flex-shrink mx-4 text-gray-400">또는</span>
+              <span className="flex-shrink mx-4 text-gray-400">
+                {t("common.or")}
+              </span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
@@ -275,14 +218,14 @@ const LoginPage = () => {
               className="w-full bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
               onClick={handleGoogleLogin}
             >
-              구글로 시작하기
+              {t("auth.start_with_google")}
             </Button>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-muted-foreground">
-              아직 계정이 없으신가요?{" "}
+              {t("auth.no_account")}{" "}
               <Link to="/register" className="text-coffee hover:underline">
-                회원가입
+                {t("common.register")}
               </Link>
             </p>
           </CardFooter>
