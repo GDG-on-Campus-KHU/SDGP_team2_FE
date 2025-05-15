@@ -109,6 +109,7 @@
 | `Google Maps API` | Map integration |
 | `Zod` | Form validation |
 | `Firebase Hosting` | Front-end deployment |
+| `Github actions` | CI/CD |
 
 ---
 
@@ -118,7 +119,7 @@
 - ✅ Map-based collection search
 - ✅ Cafe management and collection requests
 - ✅ User MyPage
-- 🔄 AI solution recommendation *(In Progress)*
+- ✅ AI solution recommendation
 - 🔄 Upcycling market / chat *(Later phase)*
 
 ---
