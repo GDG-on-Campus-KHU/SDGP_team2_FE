@@ -6,6 +6,8 @@
 <img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react" />
 <img src="https://img.shields.io/badge/Google%20Maps%20API-Geo-lightblue?style=for-the-badge&logo=googlemaps" />
 <img src="https://img.shields.io/badge/Firebase%20Hosting-CDN-ffca28?style=for-the-badge&logo=firebase" />
+<img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+<img src="https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white" />
 
 </p>
 
