@@ -3,11 +3,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/SpringBoot-3.0-green?style=for-the-badge&logo=springboot"/>
-  <img src="https://img.shields.io/badge/MySQL-Relational-blue?style=for-the-badge&logo=mysql"/>
-  <img src="https://img.shields.io/badge/Redis-Cache-red?style=for-the-badge&logo=redis"/>
-  <img src="https://img.shields.io/badge/Gemini-API-lightgray?style=for-the-badge&logo=google"/>
-  <img src="https://img.shields.io/badge/AWS-S3-orange?style=for-the-badge&logo=amazonaws"/>
+<img src="https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react" />
+<img src="https://img.shields.io/badge/Google%20Maps%20API-Geo-lightblue?style=for-the-badge&logo=googlemaps" />
+<img src="https://img.shields.io/badge/Firebase%20Hosting-CDN-ffca28?style=for-the-badge&logo=firebase" />
+
 </p>
 
 <h1 align="center">☕ ECO-BEAN</h1>
@@ -98,7 +97,7 @@
 | `AWS S3` | Image upload storage |
 | `Gemini API` | AI-based suggestions/reports |
 | `SpringDoc (Swagger UI)` | API documentation automation |
-
+| `Github actions` | CI/CD |
 ---
 
 | Technology | Role |
