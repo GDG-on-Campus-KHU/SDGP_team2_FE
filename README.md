@@ -24,7 +24,7 @@
 
 ## 📌 Overview
 
-> **CoffeeReturn** is an eco-friendly collection network platform  
+> **ECO-BEAN** is an eco-friendly collection network platform  
 > that connects **cafes and users** to reduce the careless disposal of coffee grounds.
 
 - 🗺️ **Search collection points via map**
@@ -70,7 +70,6 @@
 
 ### 📊 6. Environmental Report
 - Visualize carbon reduction and recycling score
-- Weekly / Monthly reports
 - Compare data between users and cafes
 
 > 🧾 **Example Report**  
